@@ -15,6 +15,7 @@ fixture=r'''
 #include <assert.h>
 struct device {int unused;}; struct device_attribute {int unused;};
 #define pr_err(...) ((void)0)
+#define pr_debug(...) ((void)0)
 unsigned int g_reg_value=0xaabb;
 static int hardware_error,reads,writes;
 static unsigned int last_address,last_value;

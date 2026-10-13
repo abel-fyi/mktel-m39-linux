@@ -88,13 +88,30 @@ number() {
     case "$value" in ''|*[!0-9]*) fail "Invalid reading from $1";; esac
     echo "$value"
 }
-readreg() {
+readreg_raw() {
     case "$1" in 0200|028a|0ca4|0cb2|0e94|0eb0|0e8a|0e2e|0e32|0e04|0e06|0e08|0f48|0f4c|0f4e|0f50|0f54|0f62|0f66|0f74|0f76|0f7a) ;; *) fail 'Unexpected register';; esac
     # Exactly five bytes selects a READ in the reviewed sysfs handler.
     printf '%s\n' "$1" > /run/m39-pmic-read-request || fail 'Cannot buffer read request'
     cat /run/m39-pmic-read-request > "$access" || fail 'PMIC read selection failed'
     number "$access"
 }
+
+readreg() {
+    if [ "${M39_TRACE_IO:-0}" != 1 ]; then
+        readreg_raw "$@"
+        return
+    fi
+    io_started=$(uptime_seconds)
+    printf 'readreg %s started=%s\n' "$1" "$io_started" > /run/m39-charge-last-io
+    if readreg_raw "$@"; then io_result=0; else io_result=$?; fi
+    io_finished=$(uptime_seconds)
+    if [ "$((io_finished - io_started))" -ge 1 ]; then
+        echo "SLOW_IO operation=readreg register=$1 start=$io_started end=$io_finished result=$io_result" >&2
+    fi
+    printf 'readreg %s completed=%s result=%s\n' "$1" "$io_finished" "$io_result" > /run/m39-charge-last-io
+    return "$io_result"
+}
+
 field() {
     addr=$1 mask=$2 bits=$3
     old=$(readreg "$addr") || return 1
