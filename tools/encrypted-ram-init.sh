@@ -61,8 +61,13 @@ if ! /usr/local/sbin/m39-charge stop > /run/m39-unlock-charge-stop.log 2>&1; the
     while :; do sleep 10; done
 fi
 [ "$user_stopped" = 1 ] || rm -f /run/m39-charge-startup.disabled
-kill "$serial_pid" "$display_pid" 2>/dev/null
-if [ -f /run/m39-serial-child.pid ]; then kill "$(cat /run/m39-serial-child.pid)" 2>/dev/null; fi
+# Interactive ash ignores TERM; stop the respawner first, then its shell.
+# Otherwise the old-root shell survives switch_root and competes for ttyGS0.
+kill -KILL "$serial_pid" 2>/dev/null
+kill "$display_pid" 2>/dev/null
+if [ -f /run/m39-serial-child.pid ]; then
+    kill -KILL "$(cat /run/m39-serial-child.pid)" 2>/dev/null
+fi
 sleep 1
 for directory in proc sys dev run; do
     mkdir -p "/newroot/$directory"

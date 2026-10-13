@@ -14,9 +14,10 @@ remain applicable; linked external firmware and sources are not relicensed.
 - Alpine 3.23.6 ARM64 boots with a source-built Linux 3.18.19 kernel.
 - Physical terminal, fastfetch, keypad input and root USB console work.
 - Software reboot and binary backlight control work.
-- Root filesystem currently runs in RAM; runtime changes disappear on reboot.
-- LUKS2 internal-root/microSD-home provisioning is in progress; encrypted boot
-  has not yet been tested end to end. Preparation is paused for low battery.
+- Alpine boots from a LUKS2 encrypted internal root (14 GB ext4).
+- The LUKS2 encrypted microSD mounts as `/home` (58.4 GB ext4).
+- Keypad passphrase unlock and root transition work; reboot persistence
+  verification is still pending.
 - Wi-Fi, touchscreen, audio, modem and accelerated graphics remain unfinished.
 
 ## Battery: work in progress
@@ -64,6 +65,6 @@ kernel/toolchain/rootfs inputs; this is not yet a self-contained installer.
 
 ## Next milestones
 
-1. Persistent encrypted Alpine storage.
+1. Verify reboot persistence and improve shutdown/init integration.
 2. Networking/SSH, touchscreen and a lightweight GUI.
 3. Modern-kernel port and remaining battery-management features.
