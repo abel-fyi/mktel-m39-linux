@@ -1,0 +1,19 @@
+# Device data, credentials and generated outputs
+/secrets/
+/backups/
+/logs/
+/artifacts/
+/build/
+/.venv/
+/.state*
+/hwparam.json
+/analysis/*
+!/analysis/BL25BI-RESEARCH.md
+!/analysis/CHARGING.md
+!/analysis/BATTERY-SENSOR-AUDIT.md
+# External source checkouts and toolchains
+/tools/*/
+__pycache__/
+*.pyc
+*.o
+*.so
