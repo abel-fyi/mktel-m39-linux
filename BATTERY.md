@@ -105,3 +105,8 @@ pause between verified timed completions and a 95-minute outer limit. Faults,
 unplug/manual stop, changed controller identity or unverified cleanup stop it.
 A voltage cutoff stops it too. It does not implement normal automatic recharge
 or claim a full battery. State and logs remain under `/run` on the phone.
+
+Kernel #17 with debug-only PMIC access logging completed three consecutive
+30-minute sessions without a watchdog/charger fault. Final voltage was 3.606 V;
+charging stopped at the test time budget and shutdown was verified. The 3.9 V
+ceiling was not reached, so cutoff/recharge behavior remains unverified.
