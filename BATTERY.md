@@ -96,3 +96,12 @@ replacement kernel disables that charging-only behavior; low-voltage hardware
 protection stays in place. Physical unplug/reconnect passed on kernel #16: boot ID stayed unchanged,
 encrypted root/home stayed mounted, and session 2 restarted net charging.
 The new unlock bootstrap also starts bounded charging before passphrase entry.
+
+## Ceiling characterization
+
+`m39-charge-ceiling-test.sh` is an explicit supervised test, not a boot service.
+It runs at most three existing bounded 300 mA/3.9 V sessions, with a 60-second
+pause between verified timed completions and a 95-minute outer limit. Faults,
+unplug/manual stop, changed controller identity or unverified cleanup stop it.
+A voltage cutoff stops it too. It does not implement normal automatic recharge
+or claim a full battery. State and logs remain under `/run` on the phone.
