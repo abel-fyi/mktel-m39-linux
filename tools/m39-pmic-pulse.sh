@@ -180,7 +180,10 @@ guard() {
         stop_reason=voltage_limit
         fail "Battery voltage $voltage reached diagnostic ceiling $maximum_mv"
     fi
-    [ "$vbus" -ge 4500 ] && [ "$vbus" -le 5500 ] || fail "USB voltage $vbus outside test range"
+    if [ "$vbus" -lt 4500 ] || [ "$vbus" -gt 5500 ]; then
+        stop_reason=input_voltage_changed
+        fail "USB voltage $vbus outside test range"
+    fi
     [ "$pmic_temp" -ge 10000 ] && [ "$pmic_temp" -lt 40000 ] || fail "PMIC temperature $pmic_temp outside test range"
     [ "$diode_voltage" -ge 650 ] && [ "$diode_voltage" -le 800 ] || fail 'PMIC diode outside diagnostic range'
     [ "$(( $(readreg 0f54) & 1 ))" -eq 1 ] || fail 'Hardware battery overvoltage protection disabled'
@@ -237,9 +240,12 @@ cleanup() {
             set -- $cleanup_sample
             if [ "$#" -eq 5 ]; then
                 if [ "$3" -lt 1000 ]; then
-                    if [ "${stop_reason:-unknown}" = stop_requested ]; then
-                        stop_reason=unplugged
-                    fi
+                    case "${stop_reason:-unknown}" in
+                        stop_requested|charger_stopped|input_voltage_changed)
+                            stop_reason=unplugged
+                            test_exit=0
+                            ;;
+                    esac
                     restore_profile=0
                     echo "USB input absent (${3}mV); charging verified off, leaving standby profile unchanged."
                 fi
@@ -344,7 +350,7 @@ while [ "$count" -lt "$intervals" ]; do
         if [ "$requires_owner" -eq 1 ]; then
             [ "$(number "$owner_path")" -gt 0 ] || fail 'Exclusive charger lease expired'
         fi
-        [ "$(( $(readreg 0f48) & 24 ))" -eq 24 ] || fail 'Charger stopped before sampling'
+        [ "$(( $(readreg 0f48) & 24 ))" -eq 24 ] || { stop_reason=charger_stopped; fail 'Charger stopped before sampling'; }
         [ "$(( $(readreg 0f66) & 4 ))" -eq 0 ] || fail 'Watchdog expired before sampling'
         [ "$(( $(readreg 0f62) & 31 ))" -eq 16 ] || fail 'Four-second watchdog profile changed'
         [ "$(( $(readreg 0f4c) & 10 ))" -eq 10 ] || fail 'Voltage/current regulation disabled before sampling'
@@ -366,7 +372,7 @@ while [ "$count" -lt "$intervals" ]; do
         break
     fi
     [ "$(( $(readreg 0f62) & 16 ))" -eq 16 ] || fail 'Watchdog was disabled by another driver'
-    [ "$((charger_now & 24))" -eq 24 ] || fail 'Charger stopped'
+    [ "$((charger_now & 24))" -eq 24 ] || { stop_reason=charger_stopped; fail 'Charger stopped'; }
     [ "$((watchdog_now & 4))" -eq 0 ] || fail 'Watchdog expired'
     if [ "$supervised_run" -eq 1 ]; then
         [ "$fg_direction" -gt 0 ] || fail 'No net battery charging during supervised run'

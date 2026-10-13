@@ -50,8 +50,8 @@ experimental baseline, but remain required for normal-phone battery management.
 ## Current validation
 
 Installed experimental startup image:
-`alpine-m39-battery-experimental-startup.partition.img`, SHA-256
-`28e8d85fcbf29c6563de04303912014c557e3fdf44978936e1b8ad3f181ec124`.
+`alpine-m39-battery-experimental-unplug.partition.img`, SHA-256
+`401be1b2493107a5a5f8f4ed2982b8ae4c0d927150c5f02f086118f6d5e41856`.
 Full boot-partition readback matched. Software reboot returned Alpine;
 startup passed the hardware watchdog-cutoff test and started net charging.
 `m39-charge stop` reported matching-controller cleanup, released the lease,
@@ -59,17 +59,18 @@ removed runtime locks and read back both charger gates off.
 
 Host tests cover low voltage, voltage ceiling, startup cancellation/failure,
 regulation faults, stale completion records, time/voltage outcomes and service
-connect/disconnect/no-replay behavior. The new image's physical reconnect and
-battery-only behavior still need a fresh hardware check; host tests do not
-substitute for that. Original recovery kernel/DTB are unchanged.
+connect/disconnect/no-replay behavior. Physical unplug/reconnect passed on the startup image: Alpine stayed on,
+the boot UUID was unchanged, cleanup verified charging off at113mV USB input,
+and session2 resumed net charging. The follow-up image booted with the same kernel, passed its watchdog test
+and corrects unplug classification; host fault tests verify it does not hide unrelated failures. Original recovery kernel/DTB are unchanged.
 
 Build with the existing separately acquired inputs:
 
 ```sh
-python3 tools/build-source-boot.py --name alpine-m39-battery-experimental-startup \
+python3 tools/build-source-boot.py --name alpine-m39-battery-experimental-unplug \
   --dtb analysis/boot-base-m39-backlight.dtb --initcall-trace \
   --charge-tools --bounded-charge-startup
-python3 tools/verify-source-boot.py artifacts/alpine-m39-battery-experimental-startup.json
+python3 tools/verify-source-boot.py artifacts/alpine-m39-battery-experimental-unplug.json
 ```
 
 Omit `--bounded-charge-startup` to build the manual-only variant.

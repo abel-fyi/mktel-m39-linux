@@ -35,8 +35,8 @@ Screen idle control: `m39-screen on 60`, `m39-screen off`.
 See [battery usage and limits](BATTERY.md), [battery research](analysis/BL25BI-RESEARCH.md) and
 [charging notes](analysis/CHARGING.md). Historical notes may describe older
 images; the current verified image is
-`alpine-m39-battery-experimental-startup.partition.img`, SHA-256:
-`28e8d85fcbf29c6563de04303912014c557e3fdf44978936e1b8ad3f181ec124`.
+`alpine-m39-battery-experimental-unplug.partition.img`, SHA-256:
+`401be1b2493107a5a5f8f4ed2982b8ae4c0d927150c5f02f086118f6d5e41856`.
 The prior manual-only image remains the recovery baseline.
 
 ## USB console
@@ -60,7 +60,6 @@ kernel/toolchain/rootfs inputs; this is not yet a self-contained installer.
 
 ## Next milestones
 
-1. Finish the experimental charging policy while keeping temperature support
-   explicitly deferred and existing engineering limits in place.
-2. Persistent encrypted Alpine storage.
-3. Networking/SSH, touchscreen and a lightweight GUI.
+1. Persistent encrypted Alpine storage.
+2. Networking/SSH, touchscreen and a lightweight GUI.
+3. Modern-kernel port and remaining battery-management features.

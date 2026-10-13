@@ -12,7 +12,7 @@ OWNER = SOURCE.split('write_owner() (', 1)[1].split('\n)\n', 1)[0]
 
 
 class CleanupChecks(unittest.TestCase):
-    def run_cleanup(self, fail_off=False, exit_code=0, source=False, vbus=5100, sample_failure=False):
+    def run_cleanup(self, fail_off=False, exit_code=0, source=False, vbus=5100, sample_failure=False, reason="running"):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
             (root / 'm39-pmic-pulse.lock').mkdir()
@@ -51,10 +51,25 @@ saved_f66=0
                 'PATH': '/usr/bin:/bin', 'register_log': str(root / 'registers'),
                 'fail_off': str(int(fail_off)), 'test_exit': str(exit_code),
                 'requires_owner': str(int(source)), 'owner_path': str(root / 'owner'),
-                'sample_failure': str(int(sample_failure)), 'sample_vbus': str(vbus),
+                'sample_failure': str(int(sample_failure)), 'sample_vbus': str(vbus), 'stop_reason': reason,
             }, capture_output=True, text=True)
             return result.returncode, (root / 'registers').read_text().splitlines(), json.loads(
                 (root / 'm39-charge-status.json').read_text())
+
+    def test_hardware_stop_with_absent_usb_is_unplug(self):
+        _, _, state = self.run_cleanup(source=True, vbus=113, exit_code=1, reason='charger_stopped')
+        self.assertEqual(state['phase'], 'stopped')
+        self.assertEqual(state['stop_reason'], 'unplugged')
+
+    def test_hardware_stop_with_usb_present_remains_fault(self):
+        _, _, state = self.run_cleanup(source=True, vbus=5100, exit_code=1, reason='charger_stopped')
+        self.assertEqual(state['phase'], 'aborted')
+        self.assertEqual(state['stop_reason'], 'charger_stopped')
+
+    def test_unplug_does_not_hide_unrelated_fault(self):
+        _, _, state = self.run_cleanup(source=True, vbus=113, exit_code=1, reason='fault')
+        self.assertEqual(state['phase'], 'aborted')
+        self.assertEqual(state['stop_reason'], 'fault')
 
     def test_off_precedes_restoring_higher_limits(self):
         code, writes, status = self.run_cleanup()
