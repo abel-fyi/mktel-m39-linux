@@ -19,6 +19,7 @@ number() { if [ "$FAULT" = lease ]; then echo 0; else echo 100; fi; }
 readreg() {
  case "$1" in
   0f48) value=24; bad=0;;
+  0f4c) value=10; bad=0;;
   0f66) value=1; bad=5;;
   0f62) value=16; bad=17;;
   0f4e) value=3; bad=13;;
@@ -34,7 +35,7 @@ for iteration in 1; do
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
-    for fault in ['none', 'lease', '0f48', '0f66', '0f62', '0f4e', '0f50', '0f7a', 'stop']:
+    for fault in ['none', 'lease', '0f48', '0f4c', '0f66', '0f62', '0f4e', '0f50', '0f7a', 'stop']:
         log = root / (fault + '.log')
         stop = root / (fault + '.stop')
         if fault == 'stop':
@@ -48,4 +49,18 @@ with tempfile.TemporaryDirectory() as directory:
         else:
             assert not writes, (fault, writes)
             assert result.returncode == (0 if fault == 'stop' else 1), (fault, result.stderr)
+# Exercise the actual post-sample block too: changed limits must prevent its kick.
+post_start = source.rindex('    if [ "$supervised_run" -eq 1 ]; then')
+post_body = source[post_start:source.index('    count=$((count + 1))', post_start)]
+post_fixture = fixture.replace(body, post_body)
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    for fault in ['none', '0f4c', '0f4e', '0f50', '0f7a']:
+        log = root / fault
+        result = subprocess.run(['sh', '-c', post_fixture], capture_output=True, text=True,
+                                env=dict(os.environ, FAULT=fault, LOG=str(log), STOP=str(root/'stop')))
+        writes = log.read_text() if log.exists() else ''
+        assert result.returncode == (0 if fault == 'none' else 1), (fault, result.stderr)
+        assert writes == ('0f62 272\n' if fault == 'none' else ''), (fault, writes)
+print('PASS: post-sample regulation/configuration faults prevent watchdog refresh.')
 print('PASS: refresh requires active lease, enabled charger, unexpired four-second watchdog, reviewed limits/mode and no stop request.')

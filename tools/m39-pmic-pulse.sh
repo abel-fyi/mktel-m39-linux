@@ -316,6 +316,7 @@ old=$(readreg 0f66); writereg 0f66 "$((old | 3))"
 field 0f48 24 16
 field 0f7a 64 64
 field 0f7a 4 4
+[ "$(( $(readreg 0f4c) & 10 ))" -eq 10 ] || fail 'Voltage/current regulation disabled'
 [ "$(( $(readreg 0f4e) & 31 ))" -eq "$cv_code" ] || fail 'CV limit changed'
 [ "$(( $(readreg 0f50) & 15 ))" -eq "$current_code" ] || fail 'Current limit changed'
 [ "$(( $(readreg 0f7a) & 70 ))" -eq 68 ] || fail 'Voltage control/mode not ready'
@@ -346,6 +347,7 @@ while [ "$count" -lt "$intervals" ]; do
         [ "$(( $(readreg 0f48) & 24 ))" -eq 24 ] || fail 'Charger stopped before sampling'
         [ "$(( $(readreg 0f66) & 4 ))" -eq 0 ] || fail 'Watchdog expired before sampling'
         [ "$(( $(readreg 0f62) & 31 ))" -eq 16 ] || fail 'Four-second watchdog profile changed'
+        [ "$(( $(readreg 0f4c) & 10 ))" -eq 10 ] || fail 'Voltage/current regulation disabled before sampling'
         [ "$(( $(readreg 0f4e) & 31 ))" -eq "$cv_code" ] || fail 'CV limit changed before sampling'
         [ "$(( $(readreg 0f50) & 15 ))" -eq "$current_code" ] || fail 'Current limit changed before sampling'
         [ "$(( $(readreg 0f7a) & 70 ))" -eq 68 ] || fail 'Voltage-control mode changed before sampling'
@@ -370,10 +372,11 @@ while [ "$count" -lt "$intervals" ]; do
         [ "$fg_direction" -gt 0 ] || fail 'No net battery charging during supervised run'
     fi
     if [ "$supervised_run" -eq 1 ]; then
-        old=$(readreg 0f62); writereg 0f62 "$((old | 256))"
+        [ "$(( $(readreg 0f4c) & 10 ))" -eq 10 ] || fail 'Voltage/current regulation disabled'
         [ "$(( $(readreg 0f4e) & 31 ))" -eq "$cv_code" ] || fail 'CV limit changed'
         [ "$(( $(readreg 0f50) & 15 ))" -eq "$current_code" ] || fail 'Current limit changed'
         [ "$(( $(readreg 0f7a) & 70 ))" -eq 68 ] || fail 'Voltage-control configuration changed'
+        old=$(readreg 0f62); writereg 0f62 "$((old | 256))"
     fi
     count=$((count + 1))
 done

@@ -625,3 +625,18 @@ Seeanalysis/BL25BI-RESEARCH.md forsources/limits. Activeexplicitresearchgoal.
 UserserialZJ2024088888unmapped; no more repeatedthermal/resistance requests.
 Currentboot aafc4e66...armPASSservice1014/controller1038 chargepositive205.
 Researchchangedauthoritativedocumentation, notcode/firmware/charginglimits.
+# Latest controller change: regulation-enable checks
+
+The controller now requires both CV_EN and CS_EN (register0x0f4c,
+mask0x000a) before enabling current and before watchdog refresh. Post-sample
+limit/mode checks now precede the refresh too. Host fault injection verifies
+disabled regulation or changed limits prevents a kick; cleanup and stop-reason
+tests pass. Temperature sensing remains explicitly deferred.
+
+Installed in RAM on boot0ddc886e-fe94-4b85-943c-aa92ba3552d8 after verifying
+no active controller/service and lease0. Controller SHA-256:
+7a1aaf2e5cfba75ff07fbf9a3b917af119841033f2315c8c2ee0278414520c1f.
+The fresh hardware watchdog-cutoff test passed and arming completed.
+Evidence: local logs/controller-regulation-{precheck,upload,arm,start}.txt.
+This update is not yet in the flashed boot image and disappears on reboot.
+Engineering limits remain300mA nominal/3900mV/1770seconds per session.
