@@ -18,6 +18,9 @@ ln -s /proc/self/fd/2 /dev/stderr
 echo /bin/mdev > /proc/sys/kernel/hotplug
 mdev -s
 echo m39-unlock > /proc/sys/kernel/hostname
+if [ -w /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq ]; then
+    echo 221000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+fi
 apk add --no-network /opt/packages/*.apk > /run/packages.log 2>&1
 g=/sys/class/android_usb/android0
 echo 0 > "$g/enable"
@@ -50,6 +53,14 @@ if [ ! -x /newroot/sbin/m39-init ]; then
     echo 'Encrypted root lacks m39-init; remaining in recovery.' > /dev/kmsg
     while :; do sleep 10; done
 fi
+# No charge controller may retain paths into the old initramfs across switch_root.
+user_stopped=0
+[ ! -e /run/m39-charge-startup.disabled ] || user_stopped=1
+if ! /usr/local/sbin/m39-charge stop > /run/m39-unlock-charge-stop.log 2>&1; then
+    echo 'Unable to stop charging for root transition; remaining in recovery.' > /dev/kmsg
+    while :; do sleep 10; done
+fi
+[ "$user_stopped" = 1 ] || rm -f /run/m39-charge-startup.disabled
 kill "$serial_pid" "$display_pid" 2>/dev/null
 if [ -f /run/m39-serial-child.pid ]; then kill "$(cat /run/m39-serial-child.pid)" 2>/dev/null; fi
 sleep 1

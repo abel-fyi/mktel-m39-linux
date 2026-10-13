@@ -8,6 +8,8 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('local',type=Path)
 p.add_argument('remote')
 p.add_argument('--execute',action='store_true')
+p.add_argument('--mode',type=lambda value:int(value,8),choices=(0o600,0o644,0o755),default=0o755,
+               help='Destination permissions in octal (default 755).')
 p.add_argument('--recover',action='store_true',help='Finish an upload whose receiver is already waiting for input.')
 a=p.parse_args()
 data=a.local.read_bytes(); digest=hashlib.sha256(data).hexdigest()
@@ -43,7 +45,7 @@ try:
         ep_out.write(b'\x04',timeout=3000)
         read_until('__UPLOAD_DONE__')
     target=shlex.quote(a.remote)
-    command=f"stty icanon -echo; printf '\\n__UPLOAD_READY__\\n'; base64 -d > {target}; chmod 755 {target}; stty sane; stty -echo; sha256sum {target}; printf '\\n__UPLOAD_DONE__\\n'\n"
+    command=f"stty icanon -echo; printf '\\n__UPLOAD_READY__\\n'; base64 -d > {target}; chmod {a.mode:o} {target}; stty sane; stty -echo; sha256sum {target}; printf '\\n__UPLOAD_DONE__\\n'\n"
     ep_out.write(command.encode(),timeout=3000)
     read_until('__UPLOAD_READY__')
     encoded=base64.b64encode(data)

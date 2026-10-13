@@ -4,7 +4,7 @@ export TERM=linux
 uuid=@LUKS_UUID@
 printf '\033[2J\033[HMKTEL M39 - encrypted Alpine\n\n'
 printf 'LUKS2 microSD unlock\n\n'
-printf 'Use the number keys.\n#2 = submit, #3 = delete digit.\n\n'
+printf 'Use the number keys.\nCentre OK: submit.\nTop-right key: delete digit.\n\n'
 while :; do
     device=
     for candidate in /dev/mmcblk[0-9]p*; do

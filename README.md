@@ -15,6 +15,8 @@ remain applicable; linked external firmware and sources are not relicensed.
 - Physical terminal, fastfetch, keypad input and root USB console work.
 - Software reboot and binary backlight control work.
 - Root filesystem currently runs in RAM; runtime changes disappear on reboot.
+- LUKS2 internal-root/microSD-home provisioning is in progress; encrypted boot
+  has not yet been tested end to end. Preparation is paused for low battery.
 - Wi-Fi, touchscreen, audio, modem and accelerated graphics remain unfinished.
 
 ## Battery: work in progress
@@ -37,7 +39,9 @@ See [battery usage and limits](BATTERY.md), [battery research](analysis/BL25BI-R
 images; the current verified image is
 `alpine-m39-battery-experimental-unplug.partition.img`, SHA-256:
 `401be1b2493107a5a5f8f4ed2982b8ae4c0d927150c5f02f086118f6d5e41856`.
-The prior manual-only image remains the recovery baseline.
+The prior manual-only image remains the recovery baseline. The current local
+storage-tools image additionally enables AES-XTS and bundles signed crypto/ext4
+packages. Charging under storage load and low-voltage recovery remain unresolved.
 
 ## USB console
 

@@ -23,6 +23,9 @@ if [ "$home_mounted" != 1 ]; then
     echo 'Encrypted microSD /home unavailable; internal root remains usable.' >> /etc/motd
 fi
 echo 'M39: switched to encrypted persistent root' > /dev/kmsg
+if [ ! -e /run/m39-charge-startup.disabled ]; then
+    /usr/local/libexec/m39/m39-charge-startup > /run/m39-charge-startup.log 2>&1 &
+fi
 /usr/local/bin/m39-terminal > /run/display-terminal.log 2>&1 &
 while :; do
     if [ ! -e /dev/ttyGS0 ]; then mdev -s; sleep 1; continue; fi

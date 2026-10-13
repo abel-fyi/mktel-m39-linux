@@ -13,6 +13,8 @@ parser.add_argument('--initcall-trace', action='store_true',
                     help='Require source markers and enable verbose boot logs without automatic panic reboot.')
 parser.add_argument('--bounded-charge-startup', action='store_true',
                     help='Start explicitly experimental bounded charging at boot; requires --charge-tools.')
+parser.add_argument('--package', type=Path, action='append', default=[],
+                    help='Include a signed offline APK in the rescue image.')
 args = parser.parse_args()
 assert not args.bounded_charge_startup or args.charge_tools
 assert Path(args.name).name == args.name
@@ -31,6 +33,12 @@ ramdisk_offset = page + align(words[0])
 ramdisk = template[ramdisk_offset:ramdisk_offset + words[2]]
 assert gzip.decompress(ramdisk).startswith(b'070701')
 charge_files = {}
+package_files = {}
+for package in args.package:
+    assert package.suffix == '.apk' and package.is_file()
+    destination = 'opt/packages/' + package.name
+    assert destination not in package_files
+    package_files[destination] = package.read_bytes()
 if args.charge_tools:
     charge_files = {
         'usr/local/sbin/m39-charge': (root / 'tools/m39-charge.sh').read_bytes(),
@@ -55,7 +63,8 @@ if args.charge_tools:
         from bootramdisk import replace_file
         ramdisk = gzip.compress(replace_file(archive, 'init', revised), mtime=0)
     assert charge_files['usr/local/libexec/m39/m39-fg-sample'][:4] == b'\x7fELF'
-    ramdisk = gzip.compress(append_files(gzip.decompress(ramdisk), charge_files), mtime=0)
+if charge_files or package_files:
+    ramdisk = gzip.compress(append_files(gzip.decompress(ramdisk), {**charge_files, **package_files}), mtime=0)
 image = image_path.read_bytes()
 assert image[0x38:0x3c] == b'ARMd'
 dtb = dtb_path.read_bytes()
@@ -91,9 +100,10 @@ metadata = {
     'kernel_release': (root / 'build/mt6735-source/include/config/kernel.release').read_text().strip(),
     'raw_kernel_sha256': hashlib.sha256(image).hexdigest(),
     'ramdisk_sha256': hashlib.sha256(ramdisk).hexdigest(),
-    'ramdisk_identical_to': None if args.charge_tools else str(template_path.relative_to(root)),
+    'ramdisk_identical_to': None if (args.charge_tools or package_files) else str(template_path.relative_to(root)),
     'ramdisk_template': str(template_path.relative_to(root)),
     'bundled_charge_files': {name: hashlib.sha256(payload).hexdigest() for name, payload in charge_files.items()},
+    'bundled_extra_files': {name: hashlib.sha256(payload).hexdigest() for name, payload in package_files.items()},
     'charging_auto_armed': args.bounded_charge_startup,
     'bounded_charge_startup': args.bounded_charge_startup,
     'dtb_sha256': hashlib.sha256(dtb).hexdigest(),

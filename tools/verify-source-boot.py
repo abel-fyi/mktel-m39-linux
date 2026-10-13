@@ -58,7 +58,7 @@ for name, value in original.items():
                 assert current[name][0][index] == value[0][index]
     else:
         assert current[name] == value, name
-for name, checksum in metadata.get('bundled_charge_files', {}).items():
+for name, checksum in {**metadata.get('bundled_charge_files', {}), **metadata.get('bundled_extra_files', {})}.items():
     values, payload = current[name]
     assert hashlib.sha256(payload).hexdigest() == checksum
     assert stat.S_ISREG(values[1]) and values[1] & 0o777 == 0o755
@@ -71,6 +71,6 @@ assert args.metadata.with_suffix('.img').read_bytes() == partition[:metadata['bo
 print(json.dumps(dict(validated=True, partition_sha256=metadata['partition_sha256'],
                      original_entries_unchanged=len(original) - int(bool(metadata.get('bounded_charge_startup'))),
                      init_startup_hook_added=bool(metadata.get('bounded_charge_startup')),
-                     added_files=list(metadata.get('bundled_charge_files', {})),
+                     added_files=list({**metadata.get('bundled_charge_files', {}), **metadata.get('bundled_extra_files', {})}),
                      header_lengths_and_boot_id_verified=True,
                      auto_armed=metadata.get('bounded_charge_startup', False)), indent=2))
