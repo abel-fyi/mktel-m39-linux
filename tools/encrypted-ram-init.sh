@@ -33,6 +33,9 @@ if [ -e "$g/f_acm/instances" ]; then echo 1 > "$g/f_acm/instances"; fi
 echo acm > "$g/functions"
 echo 1 > "$g/enable"
 mdev -s
+# Charging does not depend on unlocking encrypted storage. The helper remains
+# bounded and is stopped before switching roots below.
+/usr/local/libexec/m39/m39-charge-startup > /run/m39-charge-startup.log 2>&1 &
 /usr/local/bin/m39-terminal > /run/display-terminal.log 2>&1 &
 display_pid=$!
 serial_loop() {
@@ -56,7 +59,17 @@ fi
 # No charge controller may retain paths into the old initramfs across switch_root.
 user_stopped=0
 [ ! -e /run/m39-charge-startup.disabled ] || user_stopped=1
-if ! /usr/local/sbin/m39-charge stop > /run/m39-unlock-charge-stop.log 2>&1; then
+# An unlock can finish while startup is still validating watchdog expiry.
+# stop cancels startup immediately; give that bounded test time to release its lease.
+stopped=0
+for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    if /usr/local/sbin/m39-charge stop >> /run/m39-unlock-charge-stop.log 2>&1; then
+        stopped=1
+        break
+    fi
+    sleep 1
+done
+if [ "$stopped" != 1 ]; then
     echo 'Unable to stop charging for root transition; remaining in recovery.' > /dev/kmsg
     while :; do sleep 10; done
 fi

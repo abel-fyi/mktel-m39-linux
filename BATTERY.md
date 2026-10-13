@@ -85,3 +85,13 @@ dips but aborts after three consecutive nonpositive samples. Reaching the
 voltage ceiling during charging is a controlled stop, not a generic fault.
 These fixes do not change the 300 mA/3.9 V/session limits. Automatic full-charge
 termination, recharge policy and low-voltage recovery still require work.
+
+## Charging-only boot shutdown
+
+LK can boot Alpine with tag 9 (`LOW_POWER_OFF_CHARGING_BOOT`). With the vendor
+`CONFIG_MTK_KERNEL_POWER_OFF_CHARGING` option enabled, the PMIC USB-removal
+interrupt and battery thread explicitly shut down the system. This explains
+a software shutdown path even while Alpine is running. The experimental
+replacement kernel disables that charging-only behavior; low-voltage hardware
+protection stays in place. Physical unplug operation still needs verification.
+The new unlock bootstrap also starts bounded charging before passphrase entry.

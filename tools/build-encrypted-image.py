@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Package encrypted-root bootstrap around the verified source storage kernel."""
-import gzip, hashlib, json, struct, subprocess
+import argparse, gzip, hashlib, json, struct, subprocess
 from pathlib import Path
 from bootramdisk import entries, replace_file, append_files
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--source-name', default='alpine-m39-storage-tools')
+args = parser.parse_args()
+assert Path(args.source_name).name == args.source_name
 root = Path(__file__).resolve().parent.parent
 metadata = json.loads((root/'artifacts/encrypted-internal-root.json').read_text())
-base_meta = json.loads((root/'artifacts/alpine-m39-storage-tools.json').read_text())
-base = (root/'artifacts/alpine-m39-storage-tools.partition.img').read_bytes()
+base_meta = json.loads((root/'artifacts'/f'{args.source_name}.json').read_text())
+base = (root/'artifacts'/f'{args.source_name}.partition.img').read_bytes()
 assert hashlib.sha256(base).hexdigest() == base_meta['partition_sha256']
 script = (root/'tools/encrypted-unlock-template.sh').read_text().replace('@LUKS_UUID@', metadata['luks_uuid'])
 script = script.replace('LUKS2 microSD unlock', 'LUKS2 internal root unlock').replace('Waiting for the encrypted microSD', 'Waiting for encrypted internal root')
@@ -49,14 +53,14 @@ partition = boot.ljust(len(base),b'\0')
 name = 'alpine-m39-encrypted-source'
 (root/'artifacts'/f'{name}.img').write_bytes(boot)
 (root/'artifacts'/f'{name}.partition.img').write_bytes(partition)
-result = dict(source_image='alpine-m39-storage-tools.partition.img',
+result = dict(source_image=f'{args.source_name}.partition.img',
  source_partition_sha256=base_meta['partition_sha256'],
  partition_sha256=hashlib.sha256(partition).hexdigest(),
  kernel_payload_sha256=hashlib.sha256(kernel).hexdigest(),kernel_unchanged=True,
  ramdisk_sha256=hashlib.sha256(ramdisk).hexdigest(),boot_bytes=len(boot),
  luks_uuid=metadata['luks_uuid'],credentials_embedded=False,
  modified_entries=['init','usr/local/bin/m39-terminal'],added_entries=['sbin/m39-unlock'],
- charging='Manual in unlock bootstrap; bounded automatic startup after switch_root.',
+ charging='Bounded automatic charging before unlock and after switch_root.',
  boot_tested=False)
 (root/'artifacts'/f'{name}.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))
