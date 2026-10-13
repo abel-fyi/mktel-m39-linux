@@ -45,6 +45,7 @@ if args.charge_tools:
         'usr/local/libexec/m39/m39-pmic-pulse.sh': (root / 'tools/m39-pmic-pulse.sh').read_bytes(),
         'usr/local/libexec/m39/m39-plug-charge.sh': (root / 'tools/m39-plug-charge.sh').read_bytes(),
         'usr/local/libexec/m39/m39-fg-sample': (root / 'artifacts/m39-fg-sample').read_bytes(),
+        'usr/local/libexec/m39/m39-adc-sample': (root / 'artifacts/m39-adc-sample').read_bytes(),
         'usr/local/sbin/m39-screen': (root / 'tools/m39-screen.sh').read_bytes(),
         'usr/local/libexec/m39/m39-screen-idle': (root / 'artifacts/m39-screen-idle').read_bytes(),
     }

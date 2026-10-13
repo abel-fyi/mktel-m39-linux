@@ -74,3 +74,14 @@ python3 tools/verify-source-boot.py artifacts/alpine-m39-battery-experimental-un
 ```
 
 Omit `--bounded-charge-startup` to build the manual-only variant.
+
+## Native sampling update
+
+A native ADC helper replaces the slow shell ADC transaction when installed.
+Phone measurements took about 20 ms; complete controller guards took about
+60–80 ms. A 256 MiB write to encrypted root passed with positive sampled fuel
+current and no watchdog fault. The controller now tolerates isolated current
+dips but aborts after three consecutive nonpositive samples. Reaching the
+voltage ceiling during charging is a controlled stop, not a generic fault.
+These fixes do not change the 300 mA/3.9 V/session limits. Automatic full-charge
+termination, recharge policy and low-voltage recovery still require work.

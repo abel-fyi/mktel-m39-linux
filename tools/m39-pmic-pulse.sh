@@ -115,6 +115,10 @@ writereg() {
     }
 }
 sample() (
+    # Native transaction avoids dozens of fork/execs within the four-second WDT.
+    if [ -x /usr/local/libexec/m39/m39-adc-sample ]; then
+        exec /usr/local/libexec/m39/m39-adc-sample
+    fi
     adc_clock1=$(readreg 028a) || exit 1
     adc_clock2=$(readreg 0e94) || exit 1
     adc_clock3=$(readreg 0eb0) || exit 1
@@ -178,6 +182,10 @@ guard() {
     [ "$voltage" -ge 3200 ] || fail "Battery voltage $voltage outside test range"
     if [ "$voltage" -ge "$maximum_mv" ]; then
         stop_reason=voltage_limit
+        if [ "$status_active" -eq 1 ]; then
+            echo "Battery voltage $voltage reached diagnostic ceiling $maximum_mv; stopping."
+            exit 0
+        fi
         fail "Battery voltage $voltage reached diagnostic ceiling $maximum_mv"
     fi
     if [ "$vbus" -lt 4500 ] || [ "$vbus" -gt 5500 ]; then
@@ -335,6 +343,7 @@ if [ "$supervised_run" -eq 1 ]; then
     intervals=$run_seconds
 fi
 watchdog_observed=0
+nonpositive_samples=0
 while [ "$count" -lt "$intervals" ]; do
     if [ "$supervised_run" -eq 1 ] && [ "$(( $(uptime_seconds) - observation_start ))" -ge "$run_seconds" ]; then
         stop_reason=time_limit
@@ -375,7 +384,18 @@ while [ "$count" -lt "$intervals" ]; do
     [ "$((charger_now & 24))" -eq 24 ] || { stop_reason=charger_stopped; fail 'Charger stopped'; }
     [ "$((watchdog_now & 4))" -eq 0 ] || fail 'Watchdog expired'
     if [ "$supervised_run" -eq 1 ]; then
-        [ "$fg_direction" -gt 0 ] || fail 'No net battery charging during supervised run'
+        # One load transient is not sustained loss of charging. Keep all voltage,
+        # USB, thermal and watchdog guards active during this bounded debounce.
+        if [ "$fg_direction" -gt 0 ]; then
+            nonpositive_samples=0
+        else
+            nonpositive_samples=$((nonpositive_samples + 1))
+            echo "Net charging transient: consecutive_nonpositive=$nonpositive_samples"
+            [ "$nonpositive_samples" -lt 3 ] || {
+                stop_reason=net_discharge
+                fail 'No net battery charging for three consecutive fresh samples'
+            }
+        fi
     fi
     if [ "$supervised_run" -eq 1 ]; then
         [ "$(( $(readreg 0f4c) & 10 ))" -eq 10 ] || fail 'Voltage/current regulation disabled'
