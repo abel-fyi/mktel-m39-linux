@@ -14,6 +14,9 @@ status() {
  printf '{"phase":"%s","boot_id":"%s","pid":%s,"segment":%s,"maximum_segments":3,"voltage_limit_mv":3900}\n' "$phase" "$boot" "$$" "$segment" > /run/m39-ceiling-test.json.tmp
  mv /run/m39-ceiling-test.json.tmp /run/m39-ceiling-test.json
 }
+active_phase() {
+ case "$1" in preparing|charging) return 0;; *) return 1;; esac
+}
 terminal_action() {
  # Arguments are validated controller phase, stop reason, voltage and limit.
  case "$1:$2" in
@@ -24,7 +27,7 @@ terminal_action() {
   *) echo fault ;;
  esac
 }
-value() { sed -n "s/.*\"$2\":\"\{0,1\}\([^\",}]*\).*/\1/p" "$1"; }
+value() { sed -n "s/.*\"$2\":[[:space:]]*\"\{0,1\}\([^\",}]*\).*/\1/p" "$1"; }
 cleanup() {
  result=$?
  trap - EXIT
@@ -63,7 +66,7 @@ while [ "$segment" -lt 3 ]; do
   if [ -r "$f" ] && [ "$(value "$f" pid)" = "$controller" ]; then
    [ "$(value "$f" boot_id)" = "$boot" ]
    state=$(value "$f" phase)
-   if [ "$state" != charging ]; then
+   if ! active_phase "$state"; then
     [ "$(value "$f" charging_off_verified)" = true ]
     action=$(terminal_action "$state" "$(value "$f" stop_reason)" "$(value "$f" battery_mv)" "$(value "$f" voltage_limit_mv)")
     break
