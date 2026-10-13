@@ -93,5 +93,6 @@ LK can boot Alpine with tag 9 (`LOW_POWER_OFF_CHARGING_BOOT`). With the vendor
 interrupt and battery thread explicitly shut down the system. This explains
 a software shutdown path even while Alpine is running. The experimental
 replacement kernel disables that charging-only behavior; low-voltage hardware
-protection stays in place. Physical unplug operation still needs verification.
+protection stays in place. Physical unplug/reconnect passed on kernel #16: boot ID stayed unchanged,
+encrypted root/home stayed mounted, and session 2 restarted net charging.
 The new unlock bootstrap also starts bounded charging before passphrase entry.
