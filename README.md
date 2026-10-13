@@ -3,6 +3,12 @@
 Experimental native Linux bring-up for the MKTEL M39 keypad phone
 (MT6737M, MT6328 PMIC, 2 GB RAM, 16 GB eMMC).
 
+## License
+
+Project code and original documentation are licensed under
+[GPL-2.0-only](LICENSE). Existing third-party copyright and license notices
+remain applicable; linked external firmware and sources are not relicensed.
+
 ## Status
 
 - Alpine 3.23.6 ARM64 boots with a source-built Linux 3.18.19 kernel.
