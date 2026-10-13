@@ -25,18 +25,19 @@ unplug/reconnect starts another bounded session.
 
 **Battery temperature sensing is deferred and unimplemented.** The BL-25BI
 middle contact and its calibration remain unidentified. Battery percentage,
-full-charge termination, automatic startup and normal recharge policy are
-also unfinished. This is supervised experimental charging, not a complete
+full-charge termination and normal recharge policy are also unfinished.
+An optional experimental image starts bounded charging automatically at boot. This is supervised experimental charging, not a complete
 unattended charging implementation.
 
 On the phone: `m39-charge status`, `m39-charge arm`, `m39-charge stop`.
 Screen idle control: `m39-screen on 60`, `m39-screen off`.
 
-See [battery research](analysis/BL25BI-RESEARCH.md) and
+See [battery usage and limits](BATTERY.md), [battery research](analysis/BL25BI-RESEARCH.md) and
 [charging notes](analysis/CHARGING.md). Historical notes may describe older
 images; the current verified image is
-`alpine-m39-source-battery-reporting-aux.partition.img`, SHA-256:
-`0f98501b68365bc85c63f89f46b0e4a959ad460c17418c91515d6a318e04b9a9`.
+`alpine-m39-battery-experimental-startup.partition.img`, SHA-256:
+`28e8d85fcbf29c6563de04303912014c557e3fdf44978936e1b8ad3f181ec124`.
+The prior manual-only image remains the recovery baseline.
 
 ## USB console
 

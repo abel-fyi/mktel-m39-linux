@@ -21,10 +21,34 @@ pid=''
 stop_file=''
 sequence=0
 owns_lease=0
+outcome=none
 status() {
-    printf '{"phase":"%s","service_pid":%s,"controller_pid":"%s","boot_id":"%s","session":%s}\n' \
-        "$1" "$$" "$pid" "$boot" "$sequence" > "$runtime/m39-plug-status.json.tmp"
+    printf '{"phase":"%s","service_pid":%s,"controller_pid":"%s","boot_id":"%s","session":%s,"outcome":"%s"}\n' \
+        "$1" "$$" "$pid" "$boot" "$sequence" "$outcome" > "$runtime/m39-plug-status.json.tmp"
     mv "$runtime/m39-plug-status.json.tmp" "$runtime/m39-plug-status.json"
+}
+completion_outcome() {
+    state="$runtime/m39-charge-status.json"
+    [ -r "$state" ] || { echo unverified_stop; return; }
+    grep -Fq "\"boot_id\":\"$boot\"" "$state" &&
+    grep -Fq "\"pid\":$pid," "$state" &&
+    grep -Fq '"charging_off_verified":true' "$state" || {
+        echo unverified_stop; return;
+    }
+    phase=$(sed -n 's/.*"phase":"\([^" ]*\)".*/\1/p' "$state")
+    case "$phase" in stopped|aborted) ;; *) echo cleanup_error; return;; esac
+    reason=$(sed -n 's/.*"stop_reason":"\([^" ]*\)".*/\1/p' "$state")
+    case "$reason" in
+        time_limit|interval_limit) [ "$phase" = stopped ] && echo time_limit || echo fault ;;
+        voltage_limit)
+            mv=$(sed -n 's/.*"battery_mv":\([0-9][0-9]*\).*/\1/p' "$state")
+            limit=$(sed -n 's/.*"voltage_limit_mv":\([0-9][0-9]*\).*/\1/p' "$state")
+            case "$mv:$limit" in *[!0-9:]*|:*|*:) echo unverified_stop;;
+                *) if [ "$limit" -eq 3900 ] && [ "$mv" -ge "$limit" ]; then echo voltage_limit; else echo fault; fi;;
+            esac ;;
+        stop_requested|unplugged) [ "$phase" = stopped ] && echo "$reason" || echo fault ;;
+        *) echo fault ;;
+    esac
 }
 connected() {
     [ "$(cat "$usb" 2>/dev/null || echo 0)" = 1 ] ||
@@ -43,6 +67,7 @@ stop_child() {
             kill -TERM "$pid" 2>/dev/null || :
         fi
         wait "$pid" 2>/dev/null || :
+        outcome=$(completion_outcome)
         pid=''
     fi
     if [ -n "$stop_file" ]; then rm -f "$stop_file"; stop_file=''; fi
@@ -91,6 +116,7 @@ while :; do
                 status charger_busy
             elif write_owner 1800; then
                 owns_lease=1
+                outcome=none
                 sequence=$((sequence + 1))
                 child_log="$runtime/m39-plug-charge-$$-$sequence.log"
                 stop_file="$runtime/m39-plug-charge-$$-$sequence.stop"
@@ -108,6 +134,7 @@ while :; do
     elif [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
         disconnected=0
         wait "$pid" 2>/dev/null || :
+        outcome=$(completion_outcome)
         pid=''
         if [ "$owns_lease" = 1 ]; then
             write_owner 0 || { status cleanup_failed; exit 1; }

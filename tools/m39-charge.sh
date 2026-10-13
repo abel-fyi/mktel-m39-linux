@@ -16,12 +16,17 @@ case "${1:-status}" in
 status)
     echo 'Policy: supervised; <=300mA nominal, 3.9V ceiling, <=1770s per connection.'
     echo 'Cell temperature, charge percentage and capacity remain unvalidated.'
-    for file in /run/m39-plug-status.json /run/m39-charge-status.json; do
+    for file in /run/m39-charge-startup.json /run/m39-plug-status.json /run/m39-charge-status.json; do
         if [ -r "$file" ]; then cat "$file"; else echo "$file: inactive"; fi
     done
     ;;
 arm)
     [ "$(id -u)" = 0 ]
+    if [ "${M39_STARTUP:-0}" = 1 ]; then
+        [ ! -e /run/m39-charge-startup.disabled ] || exit 1
+    else
+        rm -f /run/m39-charge-startup.disabled
+    fi
     [ -r "$owner" ] && [ "$(cat "$owner")" = 0 ]
     [ ! -d /run/m39-plug-service.lock ]
     [ ! -d /run/m39-pmic-pulse.lock ]
@@ -41,12 +46,14 @@ arm)
     fi
     [ "$(cat "$owner")" = 0 ]
     [ "$(cat /run/m39-watchdog-validated)" = "$(uname -r)" ]
+    [ ! -e /run/m39-charge-startup.disabled ] || { write_owner 0; exit 1; }
     printf '%s\n' "$boot" > /run/m39-plug-charge-armed
     nohup sh /run/m39-plug-charge.sh </dev/null >/run/m39-plug-service.log 2>&1 &
     echo 'Bounded diagnostic charging armed for this boot; not unattended/full charging.'
     ;;
 stop)
     [ "$(id -u)" = 0 ]
+    : > /run/m39-charge-startup.disabled
     rm -f /run/m39-plug-charge-armed
     if [ -d /run/m39-plug-service.lock ]; then
         grep -Fq "\"boot_id\":\"$boot\"" /run/m39-plug-status.json

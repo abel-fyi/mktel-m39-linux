@@ -1,3 +1,9 @@
+# Current milestone
+
+See [BATTERY.md](../BATTERY.md) for the current experimentally bounded startup
+image, verified recovery hash, usage and deferred temperature support.
+The chronological notes below include older RAM-only controller versions.
+
 # M39 charging investigation — 2026-10-12
 
 The integrated MT6328 charger can now be enabled, observed and disabled from

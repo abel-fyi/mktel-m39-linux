@@ -65,3 +65,29 @@ def append_files(data, files):
     found = {row[0]: row[2] for row in entries(result)}
     assert all(found[name] == payload for name, payload in files.items())
     return result
+
+
+def replace_file(data, name, payload):
+    """Replace one existing regular-file entry, preserving its metadata and all others."""
+    rows = list(entries(data))
+    matches = [row for row in rows if row[0] == name]
+    if len(matches) != 1 or not stat.S_ISREG(matches[0][1][1]):
+        raise ValueError('Replacement must identify one existing regular file')
+    _, values, _, start, end = matches[0]
+    values = values.copy()
+    values[6] = len(payload)
+    encoded = name.encode() + b'\0'
+    entry = bytearray(b'070701' + ''.join(f'{value:08x}' for value in values).encode())
+    entry.extend(encoded)
+    entry.extend(b'\0' * (-len(entry) % 4))
+    entry.extend(payload)
+    entry.extend(b'\0' * (-len(entry) % 4))
+    result = data[:start] + bytes(entry) + data[end:]
+    old = {row[0]: (row[1], row[2]) for row in rows}
+    current = {row[0]: (row[1], row[2]) for row in entries(result)}
+    assert old.keys() == current.keys()
+    for existing, value in old.items():
+        if existing != name:
+            assert current[existing] == value
+    assert current[name] == (values, payload)
+    return result

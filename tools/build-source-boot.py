@@ -8,10 +8,13 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--name', default='alpine-m39-source-diagnostic')
 parser.add_argument('--dtb', type=Path, help='Use an explicitly reviewed replacement base DTB.')
 parser.add_argument('--charge-tools', action='store_true',
-                    help='Include opt-in diagnostic helpers; never arm charging at startup.')
+                    help='Include diagnostic helpers; startup remains off unless separately enabled.')
 parser.add_argument('--initcall-trace', action='store_true',
                     help='Require source markers and enable verbose boot logs without automatic panic reboot.')
+parser.add_argument('--bounded-charge-startup', action='store_true',
+                    help='Start explicitly experimental bounded charging at boot; requires --charge-tools.')
 args = parser.parse_args()
+assert not args.bounded_charge_startup or args.charge_tools
 assert Path(args.name).name == args.name
 
 root = Path(__file__).resolve().parent.parent
@@ -37,6 +40,20 @@ if args.charge_tools:
         'usr/local/sbin/m39-screen': (root / 'tools/m39-screen.sh').read_bytes(),
         'usr/local/libexec/m39/m39-screen-idle': (root / 'artifacts/m39-screen-idle').read_bytes(),
     }
+    if args.bounded_charge_startup:
+        charge_files['usr/local/libexec/m39/m39-charge-startup'] = (root / 'tools/m39-charge-startup.sh').read_bytes()
+        # Keep the rescue init identical except for this explicit background hook.
+        from bootramdisk import entries
+        archive = gzip.decompress(ramdisk)
+        rows = list(entries(archive))
+        init_row = next(row for row in rows if row[0] == 'init')
+        hook = b'/usr/local/libexec/m39/m39-charge-startup > /run/m39-charge-startup.log 2>&1 &\n'
+        marker = b'while :; do\n'
+        assert init_row[2].count(marker) == 1
+        revised = init_row[2].replace(marker, hook + marker)
+        # Rebuild only this entry; preserve all other newc entries byte-for-byte.
+        from bootramdisk import replace_file
+        ramdisk = gzip.compress(replace_file(archive, 'init', revised), mtime=0)
     assert charge_files['usr/local/libexec/m39/m39-fg-sample'][:4] == b'\x7fELF'
     ramdisk = gzip.compress(append_files(gzip.decompress(ramdisk), charge_files), mtime=0)
 image = image_path.read_bytes()
@@ -77,7 +94,8 @@ metadata = {
     'ramdisk_identical_to': None if args.charge_tools else str(template_path.relative_to(root)),
     'ramdisk_template': str(template_path.relative_to(root)),
     'bundled_charge_files': {name: hashlib.sha256(payload).hexdigest() for name, payload in charge_files.items()},
-    'charging_auto_armed': False,
+    'charging_auto_armed': args.bounded_charge_startup,
+    'bounded_charge_startup': args.bounded_charge_startup,
     'dtb_sha256': hashlib.sha256(dtb).hexdigest(),
     'boot_bytes': len(boot),
     'partition_sha256': hashlib.sha256(partition).hexdigest(),
