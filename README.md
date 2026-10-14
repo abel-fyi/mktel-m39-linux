@@ -20,7 +20,9 @@ remain applicable; linked external firmware and sources are not relicensed.
 - Alpine boots from a LUKS2 encrypted internal root (14 GB ext4).
 - The LUKS2 encrypted microSD mounts as `/home` (58.4 GB ext4).
 - Keypad passphrase unlock, root transition and reboot persistence work.
-- Wi-Fi, touchscreen, audio, modem and accelerated graphics remain unfinished.
+- Wi-Fi connects to a WPA2 hotspot with DHCP, Internet ping and DNS verified.
+  Automatic startup after unlocking is installed; reboot validation remains.
+- Touchscreen, audio, modem and accelerated graphics remain unfinished.
 
 ## Battery: work in progress
 

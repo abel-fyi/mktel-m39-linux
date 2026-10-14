@@ -73,12 +73,13 @@ Gen2/WMT code is linked, but only the detection node exists and firmware/tools
 are absent from Alpine. Identity query returns0x0335. Six connectivity firmware
 and loader files were recovered locally from the preserved vendor backup;
 loader disassembly establishes the0x6735 initialization-family mapping.
-The active user goal now targets a verified Wi-Fi connection. Native OpenMTTools
-initialization and recovered patches successfully created `wlan0`; signed Alpine
-Wi-Fi packages are installed. Scanning sees the requested network, but the WPA
-handshake currently fails after message2 and reports WRONG_KEY. The private
-configuration matches the supplied credential; confirm hotspot settings and
-separate a credential mismatch from a driver TX issue before DHCP retry.
+The Wi-Fi connection milestone is achieved: native OpenMTTools and recovered
+firmware created `wlan0`; signed Alpine packages connected to the chosen WPA2
+hotspot, obtained an IP address, and passed Internet ping/DNS tests. The initial
+handshake failure was a credential typo, corrected privately. A persistent DHCP
+client and root-unlock Wi-Fi startup hook are installed; manual helper startup
+and duplicate invocation passed. Full reboot startup and long reconnect/renewal
+remain unverified. Next useful deliverable: SSH with public-key authentication.
 Battery protections remain unchanged. See [NETWORKING.md](NETWORKING.md).
 
 ## Working agreement

@@ -27,6 +27,9 @@ if [ ! -e /run/m39-charge-startup.disabled ]; then
     /usr/local/libexec/m39/m39-charge-startup > /run/m39-charge-startup.log 2>&1 &
 fi
 /usr/local/bin/m39-terminal > /run/display-terminal.log 2>&1 &
+if [ -x /usr/local/sbin/m39-wifi ] && [ -r /etc/wpa_supplicant/wpa_supplicant.conf ]; then
+    /usr/local/sbin/m39-wifi > /run/m39-wifi-startup.log 2>&1 &
+fi
 # The validated keypad-wake idle helper reduces backlight load. Failure is
 # logged and leaves the terminal usable; it must never prevent root boot.
 if [ -x /usr/local/sbin/m39-screen ]; then

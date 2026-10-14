@@ -1,7 +1,7 @@
 # Networking bring-up
 
-Bring-up,2026-10-14. Native WMT initialization and recovered firmware loading
-now create `wlan0`. Association, DHCP and connectivity are not yet verified.
+Bring-up,2026-10-14. **Wi-Fi works:** WPA2-PSK association, DHCP, Internet
+ping and DNS resolution passed on the user's chosen hotspot.
 The bounded charging validation continues separately.
 
 ## Findings
@@ -71,15 +71,12 @@ initialization while an existing daemon or incomplete operation is running.
 Firmware remains local and excluded from Git; redistribution rights are unknown.
 
 Signed Alpine `iw`, `wpa_supplicant`, dependencies and `tcpdump` are installed.
-Both nl80211 and wext associate, receive handshake message1 and send message2,
-but authentication has not completed. DHCP has not obtained a lease. A bounded
-EAPOL capture confirms packets in both directions; it does not prove successful
-over-the-air delivery of outgoing frames. The user reported hotspot auto-off;
-with it staying enabled, authentication still fails. WPA2-only also failed at
-the same step. Next discriminating test: another device using the same credential,
-then radio TX/firmware investigation if that succeeds. Failed-auth retries are
-disabled while waiting; WMT remains initialized. Evidence is local
-`logs/wifi-wpa2-only-test.txt` and `logs/wifi-eapol-summary.txt`.
+Initial authentication failures came from a mistyped credential; the user
+corrected it. With the corrected private configuration, nl80211 reached
+`COMPLETED`, obtained a DHCP lease, passed three Internet pings without loss,
+and resolved `alpinelinux.org`. Evidence is local
+`logs/wifi-corrected-credential-test.txt`. WPA2-only is the verified hotspot mode;
+WPA2/WPA3 mixed mode has not been retested with the corrected credential.
 
 The backup nvdata filesystem retained `/APCFG/APRDEB/WIFI` (514 bytes) and
 `WIFI_CUSTOM` (6 bytes). These were restored privately to the driver's
@@ -87,7 +84,11 @@ The backup nvdata filesystem retained `/APCFG/APRDEB/WIFI` (514 bytes) and
 warning `0x01` changed to `0x10` (invalid/default MAC per this kernel).
 This is recovered configuration, not verified factory calibration; neither files
 nor packet captures belong in Git. Credentials are root-only and excluded from
-firmware. No automatic Wi-Fi boot hook is enabled until connection is verified.
+firmware. `tools/m39-wifi.sh` starts WMT, the Wi-Fi client and a persistent DHCP
+client after encrypted-root handoff. Running the helper twice preserved a single
+instance of each daemon. The boot hook is installed; a full reboot with this hook
+has not yet been tested. Reconnection/lease renewal over long periods remain
+unverified. Wi-Fi is unavailable before unlocking root.
 
 The build script expects an existing pinned upstream checkout with the included
 patch applied, the existing AOSP GCC4.9 toolchain, and a musl sysroot extracted
