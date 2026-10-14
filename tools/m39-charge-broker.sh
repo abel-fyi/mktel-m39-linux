@@ -21,6 +21,7 @@ controller=''
 controller_start=''
 phase=initializing
 reason=none
+last_event=''
 [ ! -d "$runtime/m39-ceiling-test.lock" ]
 [ ! -d "$runtime/m39-charge-startup.lock" ]
 mkdir "$runtime/m39-broker.lock" || exit 1
@@ -28,8 +29,13 @@ snapshot="$runtime/m39-broker-snapshot.$$"
 field() { sed -n "s/.*\"$1\":[[:space:]]*\"\{0,1\}\([^\",}]*\).*/\1/p" "$snapshot"; }
 status() {
  phase=$1
- printf '{"phase":"%s","pid":%s,"boot_id":"%s","controller_pid":"%s","target_mv":3900,"recharge_mv":3750,"reason":"%s"}\n' "$phase" "$$" "$boot" "$controller" "$reason" > "$runtime/m39-broker.json.tmp"
+ printf '{"phase":"%s","pid":%s,"boot_id":"%s","uptime_seconds":%s,"controller_pid":"%s","target_mv":3900,"recharge_mv":3750,"reason":"%s"}\n' "$phase" "$$" "$boot" "$(clock)" "$controller" "$reason" > "$runtime/m39-broker.json.tmp"
  mv "$runtime/m39-broker.json.tmp" "$runtime/m39-broker.json"
+ event="$phase:$controller:$reason"
+ if [ "$event" != "$last_event" ]; then
+  cat "$runtime/m39-broker.json"
+  last_event=$event
+ fi
 }
 stop_controller() {
  M39_STOP_INTERNAL=1 "$command" stop || return 1

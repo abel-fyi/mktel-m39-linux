@@ -54,6 +54,11 @@ else:
   assert json.loads((p/'m39-broker.json').read_text())['phase']=='fault'
   assert (p/'owner').read_text().strip()=='0'
   assert (p/'calls').read_text().count('arm')==count,'Fault was retried'
+  events=[json.loads(line) for line in out.splitlines() if line.startswith('{')]
+  assert any(e['phase']=='target_hold' for e in events)
+  assert events[-1]['phase']=='fault'
+  assert all(e['uptime_seconds']==100 for e in events)
+  assert all(a!=b for a,b in zip(events,events[1:])),'Repeated unchanged status flooded event log'
   # A clean timed segment gets fresh validation, rather than extending a lease.
   (p/'m39-broker.json').unlink()
   proc=subprocess.Popen(['sh',str(root/'m39-charge-broker.sh'),'--run'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
@@ -66,6 +71,8 @@ else:
   out,err=proc.communicate(timeout=5)
   assert proc.returncode==0,(out,err)
   assert json.loads((p/'m39-broker.json').read_text())['phase']=='cancelled'
+  events=[json.loads(line) for line in out.splitlines() if line.startswith('{')]
+  assert any(e['phase']=='resting' for e in events),'Timed restart missing from event history'
   assert (p/'owner').read_text().strip()=='0'
   # Terminal records must be fresh, from the correct boot/controller, and OFF.
   for changes in [dict(uptime_seconds=94),dict(uptime_seconds=101),

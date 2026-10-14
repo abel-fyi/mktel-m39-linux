@@ -168,3 +168,7 @@ Cleanup-command failure is also regression-tested and cannot report success.
 
 Monitor with `cat /run/m39-broker.json; cat /run/m39-charge-status.json` on the phone.
 `m39-charge stop` cancels the broker through the operator-stop flag.
+
+Future broker runs log timestamped JSON only when phase, controller or reason
+changes. Integration tests verify cutoff/fault history and the timed-rest phase.
+The running hardware test was not replaced to install this logging change.
