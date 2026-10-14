@@ -52,14 +52,16 @@ was separately fixed. Evidence: local `logs/voltage-check-and-fault.txt`.
 The release-budget candidate compiled and passed nine core/seven adapter fault
 cases. It uses the remaining original30ms budget for actual release confirmation;
 no timing-invalid sample is accepted and cleanup failures stay fatal. Kernel #23 is installed with full readback verification; root/home handoff and
-automatic backlight idle passed. A three-minute charging gauge probe is active; boot success is not reliability proof.
+automatic backlight idle passed. The three-minute charging gauge probe completed1366 snapshots with no logged
+gauge errors; the same controller remained charging at3538mV, raw+492 at412s.
+Evidence: local `logs/gauge-release-budget-charging-probe-result.txt`; boot success is not reliability proof.
 
 Independent removed-pack reading3.45V versus prior charging-off ADC3.480V is a
 sanity comparison under different conditions, not current/threshold calibration.
 The low-battery monitor is observation-only; no automatic cutoff is enabled.
 
-Next: inspect the charging probe at completion/fault, then sustained charging
-validation. No new battery features until it holds. After a clean1770-second
+Next: validate the first complete1770-second charging segment or inspect a reported
+fault. The short probe is evidence under charging, not proof of sustained reliability. No new battery features until it holds. After a clean1770-second
 segment, repeat boot/reconnect and move to actual cutoff/recharge. Full-charge
 termination and depleted recovery remain unverified. [BATTERY.md](BATTERY.md)
 explains ownership; local `CURRENT-STATE.md` holds exact live versions and jobs.
