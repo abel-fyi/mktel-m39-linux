@@ -115,3 +115,15 @@ ceiling was not reached, so cutoff/recharge behavior remains unverified.
 a live controller and positive raw fuel current. It rejects stale/malformed
 records and never translates voltage into percentage or claims a full battery.
 Percentage/full/cell temperature remain null pending verification/calibration.
+
+## Shutdown charging test
+
+Software power-off with USB attached returned automatically to charger boot mode
+(tag 8), with encrypted root/home still locked. A live bounded controller reported
+3.600 V and positive fuel-gauge counts. This verifies charging after that shutdown
+path; cold-off USB insertion and depleted-battery recovery remain unverified.
+
+An experimental automatic policy broker is staged but disabled. Integration tests
+cover cutoff/hold/recharge hysteresis, unplug/reconnect, exclusive ADC access and
+fault shutdown without retries. Hardware cutoff and recharge still need testing;
+the prototype retains an overall time budget and does not provide full charging.

@@ -20,6 +20,7 @@ cases=[
 (('charging',0,3500,0,'unplugged',0),'fault'),
 (('charging',1,3500,0,'stop_requested',1),'idle'),
 (('idle',1,3199,0,'none',1),'low_voltage'),
+(('low_voltage',1,3300,0,'none',1),'start_bounded'),
 (('idle',1,3500,6,'none',1),'fault'),
 (('idle',1,'invalid',0,'none',1),'fault'),
 (('idle',1,4400,0,'none',1),'fault'),

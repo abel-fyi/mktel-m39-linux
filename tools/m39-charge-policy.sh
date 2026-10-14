@@ -3,7 +3,7 @@
 # Target remains 3.9V until higher-voltage behavior is independently verified.
 m39_policy_decide() {
     state=$1 connected=$2 voltage=$3 age=$4 terminal=$5 off_verified=$6
-    case "$state" in idle|charging|target_hold|fault) ;; *) echo fault; return;; esac
+    case "$state" in idle|charging|target_hold|low_voltage|fault) ;; *) echo fault; return;; esac
     case "$connected:$off_verified" in 0:0|0:1|1:0|1:1) ;; *) echo fault; return;; esac
     case "$voltage:$age" in *[!0-9:]*|:*|*:) echo fault; return;; esac
     [ "$age" -le 5 ] && [ "$voltage" -ge 2700 ] && [ "$voltage" -le 4300 ] || { echo fault; return; }

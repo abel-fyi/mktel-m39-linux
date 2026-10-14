@@ -53,7 +53,10 @@ arm)
     ;;
 stop)
     [ "$(id -u)" = 0 ]
-    : > /run/m39-charge-startup.disabled
+    # Internal policy stops preserve an operator's cancellation flag.
+    if [ "${M39_STOP_INTERNAL:-0}" != 1 ]; then
+        : > /run/m39-charge-startup.disabled
+    fi
     rm -f /run/m39-plug-charge-armed
     if [ -d /run/m39-plug-service.lock ]; then
         grep -Fq "\"boot_id\":\"$boot\"" /run/m39-plug-status.json
