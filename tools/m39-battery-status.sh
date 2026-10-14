@@ -18,6 +18,8 @@ voltage=null
 current=null
 age=null
 reason=no_current_record
+input_present=null
+policy_phase=null
 canonical_unsigned() {
  case "$1" in ''|*[!0-9]*|0[0-9]*) return 1;; *) return 0;; esac
 }
@@ -53,6 +55,31 @@ if [ -r "$runtime/m39-charge-status.json" ]; then
   esac
  else reason=different_boot; fi
 fi
+# Idle voltage comes from the broker's existing ADC read, never another
+# hardware transaction. Require fresh sampling and a matching live process
+# birth time; a broker loop heartbeat is not a new battery measurement.
+if [ -r "$runtime/m39-broker.json" ]; then
+ cp "$runtime/m39-broker.json" "$snapshot"
+ bp=$(field pid); birth=$(field pid_start_ticks); stamp=$(field sample_uptime_seconds)
+ bm=$(field battery_mv); usb=$(field usb_mv); phase=$(field phase)
+ if [ "$(field boot_id)" = "$boot" ] && canonical_unsigned "$bp" &&
+    canonical_unsigned "$birth" && [ -r "$proc_root/$bp/stat" ] &&
+    [ "$(awk '{print $22}' "$proc_root/$bp/stat")" = "$birth" ] &&
+    tr '\000' ' ' < "$proc_root/$bp/cmdline" | grep -Fq m39-charge-broker.sh; then
+  case "$phase" in idle|low_voltage|target_hold|resting|preparing|charging)
+   heartbeat=$(field uptime_seconds)
+   if canonical_unsigned "$heartbeat" && [ "$heartbeat" -le "$now" ] &&
+      [ "$((now-heartbeat))" -le 5 ]; then policy_phase=$phase; fi ;;
+  esac
+  if canonical_unsigned "$stamp" && canonical_unsigned "$bm" &&
+     canonical_unsigned "$usb" && [ "$stamp" -le "$now" ] &&
+     [ "$((now-stamp))" -le 5 ] && [ "$bm" -ge 2700 ] && [ "$bm" -le 4300 ]; then
+   if [ "$voltage" = null ]; then voltage=$bm; age=$((now-stamp)); fi
+   if [ "$usb" -lt 1000 ]; then input_present=false
+   elif [ "$usb" -ge 4500 ] && [ "$usb" -le 5500 ]; then input_present=true; fi
+  fi
+ fi
+fi
 # All output strings come from reviewed controller enums, never credentials.
 case "$reason" in *[!a-z_]*|'') reason=invalid_record;; esac
-printf '{"status":"%s","voltage_mv":%s,"fg_signed_raw":%s,"sample_age_seconds":%s,"percentage":null,"full":null,"cell_temperature":null,"reason":"%s"}\n' "$status" "$voltage" "$current" "$age" "$reason"
+printf '{"status":"%s","voltage_mv":%s,"fg_signed_raw":%s,"sample_age_seconds":%s,"input_present":%s,"policy_phase":%s,"percentage":null,"full":null,"cell_temperature":null,"reason":"%s"}\n' "$status" "$voltage" "$current" "$age" "$input_present" "$(if [ "$policy_phase" = null ]; then echo null; else printf '"%s"' "$policy_phase"; fi)" "$reason"

@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     if (!strcmp(scenario, "busy")) ctrl |= 0x600;
     struct m39_fg_io p = {read_reg, write_control, now, pause_io};
     struct m39_fg_result r = {0};
-    int rc = m39_fg_snapshot(&p, &r);
+    int rc = m39_fg_snapshot(&p, &r, now() + 30000000ULL);
     printf("rc=%d raw=%u requests=%u clears=%u low_changes=%u ctrl=%u ticks=%llu failed_reads=%u stage=%u release_stage=%u release_control=%u\n",
            rc, r.raw, requests, clears, changes, ctrl, ticks, failed_reads,r.stage,r.release_stage,r.release_control);
     return 0;
@@ -108,7 +108,7 @@ static unsigned decimal(char *buffer, unsigned value) {
 void _start(void) {
     static const struct m39_fg_io p = {read_reg,write_control,now,pause_io};
     struct m39_fg_result r={0};
-    int rc=m39_fg_snapshot(&p,&r);
+    int rc=m39_fg_snapshot(&p,&r,now() + 30000000ULL);
     if (!rc) {
         char output[32]; unsigned n=decimal(output,r.raw); output[n++]=' ';
         if (r.raw>32767) {output[n++]='-'; n+=decimal(output+n,65535-r.raw);}

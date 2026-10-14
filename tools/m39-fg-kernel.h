@@ -32,12 +32,21 @@ static int m39_fg_raw_get(char *buffer, const struct kernel_param *parameter)
     };
     struct m39_fg_result result = {0};
     int rc;
+    u64 finish = m39_fg_now() + 30000000ULL;
     (void)parameter;
-    /* Never wait behind an unbounded legacy transaction. Busy is an error,
-     * never stale current or permission to continue charging. */
-    if (!mutex_trylock(&m39_fg_lock))
+    /* Transient vendor ownership is expected. Wait only inside the original
+     * 30 ms acquisition budget; never return stale current or touch a busy
+     * latch. Cleanup failures are still fatal and are never retried here. */
+    while (!mutex_trylock(&m39_fg_lock)) {
+        if (m39_fg_now() >= finish)
+            return -EBUSY;
+        m39_fg_pause();
+    }
+    if (m39_fg_now() >= finish) {
+        mutex_unlock(&m39_fg_lock);
         return -EBUSY;
-    rc = m39_fg_snapshot(&io, &result);
+    }
+    rc = m39_fg_snapshot(&io, &result, finish);
     mutex_unlock(&m39_fg_lock);
     if (rc) {
         pr_err("M39_FG_ERROR stage=%u release_stage=%u control=%u\n",

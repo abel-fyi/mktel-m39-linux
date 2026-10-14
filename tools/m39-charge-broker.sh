@@ -23,6 +23,10 @@ controller_start=''
 phase=initializing
 reason=none
 last_event=''
+power_mv=null
+power_usb=null
+power_stamp=null
+broker_start=$(awk '{print $22}' /proc/$$/stat)
 [ ! -d "$runtime/m39-ceiling-test.lock" ]
 [ ! -d "$runtime/m39-charge-startup.lock" ]
 mkdir "$runtime/m39-broker.lock" || exit 1
@@ -30,7 +34,7 @@ snapshot="$runtime/m39-broker-snapshot.$$"
 field() { sed -n "s/.*\"$1\":[[:space:]]*\"\{0,1\}\([^\",}]*\).*/\1/p" "$snapshot"; }
 status() {
  phase=$1
- printf '{"phase":"%s","pid":%s,"boot_id":"%s","uptime_seconds":%s,"controller_pid":"%s","target_mv":3900,"recharge_mv":3750,"reason":"%s"}\n' "$phase" "$$" "$boot" "$(clock)" "$controller" "$reason" > "$runtime/m39-broker.json.tmp"
+ printf '{"phase":"%s","pid":%s,"boot_id":"%s","uptime_seconds":%s,"controller_pid":"%s","pid_start_ticks":%s,"battery_mv":%s,"usb_mv":%s,"sample_uptime_seconds":%s,"target_mv":3900,"recharge_mv":3750,"reason":"%s"}\n' "$phase" "$$" "$boot" "$(clock)" "$controller" "$broker_start" "$power_mv" "$power_usb" "$power_stamp" "$reason" > "$runtime/m39-broker.json.tmp"
  mv "$runtime/m39-broker.json.tmp" "$runtime/m39-broker.json"
  event="$phase:$controller:$reason"
  if [ "$event" != "$last_event" ]; then
@@ -115,6 +119,9 @@ while :; do
  if [ "$3" -lt 1000 ]; then connected=0
  elif [ "$3" -ge 4500 ] && [ "$3" -le 5500 ]; then connected=1
  else exit 1; fi
+ power_mv=$voltage
+ power_usb=$3
+ power_stamp=$before
  action=$(m39_policy_decide "$state" "$connected" "$voltage" 0 none 1)
  case "$action" in
   idle|low_voltage|target_hold) state=$action; status "$action"; "$pause" 5 ;;
@@ -142,7 +149,9 @@ while :; do
     [ "$(field pid)" != "$controller" ] || break
     "$pause" 1
    done
-   state=charging ;;
+   state=charging
+   reason=none
+   power_mv=null; power_usb=null; power_stamp=null ;;
   *) exit 1 ;;
  esac
 done

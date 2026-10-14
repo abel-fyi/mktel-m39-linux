@@ -68,6 +68,11 @@ separately with `/usr/local/libexec/m39/m39-charge-broker.sh --run` for hardware
 validation, after other coordinators are stopped and ownership release is verified.
 Never start overlapping controllers or replace an executing shell script.
 
+The status tool reports fresh idle voltage/input presence from the broker's existing
+ADC snapshot, with boot identity, process birth time and sample-age checks. It
+reports policy phase separately from physical charging; no extra ADC reader is
+started. Active controllers retain their existing measurement path.
+
 The status tool validates boot/process identity and sample freshness, rejects invalid
 numeric records, and reports uncalibrated signed current counts. Percentage, capacity,
 full-charge state and cell temperature remain unavailable; none are inferred from CV.

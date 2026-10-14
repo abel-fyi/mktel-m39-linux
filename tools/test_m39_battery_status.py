@@ -22,4 +22,25 @@ with tempfile.TemporaryDirectory() as d:
  value=json.loads(subprocess.check_output(['sh',str(script)],env=env));assert value['status']=='not_charging' and value['full'] is None
  (p/'m39-charge-status.json').unlink()
  assert json.loads(subprocess.check_output(['sh',str(script)],env=env))['status']=='unknown'
+ # Broker measurements must be fresh and tied to the same process lifetime.
+ (p/'proc/456').mkdir()
+ (p/'proc/456/stat').write_text('456 (sh) S '+' '.join(['0']*18)+' 777\n')
+ (p/'proc/456/cmdline').write_bytes(b'/bin/sh\0/usr/local/libexec/m39/m39-charge-broker.sh\0')
+ broker=dict(phase='target_hold',pid=456,pid_start_ticks=777,boot_id='boot-a',
+             uptime_seconds=100,sample_uptime_seconds=99,battery_mv=3850,usb_mv=5000)
+ for changes,valid in [({},True),({'usb_mv':0},True),
+                       ({'sample_uptime_seconds':90},False),
+                       ({'sample_uptime_seconds':101},False),
+                       ({'boot_id':'foreign'},False),({'pid_start_ticks':778},False),
+                       ({'battery_mv':'03850'},False),({'usb_mv':3000},True)]:
+  (p/'m39-broker.json').write_text(json.dumps(broker|changes))
+  value=json.loads(subprocess.check_output(['sh',str(script)],env=env))
+  assert value['voltage_mv']==(3850 if valid else None),(changes,value)
+  expected_input=(False if changes.get('usb_mv')==0 else
+                  None if not valid or changes.get('usb_mv')==3000 else True)
+  assert value['input_present']==expected_input,(changes,value)
+  assert value['status']=='unknown' # Policy state alone does not prove charging.
+ (p/'proc/456/stat').unlink()
+ value=json.loads(subprocess.check_output(['sh',str(script)],env=env))
+ assert value['voltage_mv'] is None and value['policy_phase'] is None
 print('PASS: freshness, boot/PID, net-current direction, verified OFF, no invented full/SOC/temperature.')

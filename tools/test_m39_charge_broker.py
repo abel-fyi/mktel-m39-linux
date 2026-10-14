@@ -42,8 +42,10 @@ else:
   (p/'next').write_text(json.dumps(base|values));(p/'next').replace(p/'m39-charge-status.json');(p/'owner').write_text('0\n')
  proc=subprocess.Popen(['sh',str(root/'m39-charge-broker.sh'),'--run'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
  try:
-  await_phase('target_hold');assert 'arm' not in (p/'calls').read_text()
+  held=await_phase('target_hold');assert held['battery_mv']==4000 and held['usb_mv']==5000 and held['sample_uptime_seconds']==100
+  assert 'arm' not in (p/'calls').read_text()
   set_adc('3750 3750 5000 695 410\n');await_phase('charging')
+  record=json.loads((p/'m39-broker.json').read_text());assert record['battery_mv'] is None and record['sample_uptime_seconds'] is None
   samples=(p/'samples').read_text();time.sleep(.1);assert (p/'samples').read_text()==samples,'Concurrent ADC reader during charging'
   set_adc('3850 3850 5000 695 410\n');publish();await_phase('target_hold')
   count=(p/'calls').read_text().count('arm');time.sleep(.1);assert (p/'calls').read_text().count('arm')==count

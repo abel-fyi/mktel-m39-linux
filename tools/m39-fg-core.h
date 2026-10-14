@@ -40,9 +40,8 @@ static int m39_fg_release(const struct m39_fg_io *p, u64 deadline, struct m39_fg
 
 /* Every acquired request is released before success or retry. A failed
  * release is fatal, never treated as a valid or merely stale measurement. */
-static int m39_fg_snapshot(const struct m39_fg_io *p, struct m39_fg_result *out) {
+static int m39_fg_snapshot(const struct m39_fg_io *p, struct m39_fg_result *out, u64 finish) {
     unsigned identity, control, raw, attempt;
-    u64 finish = p->now() + 30000000ULL;
     out->stage=1;
     if (p->read(0x200, &identity)) return -1;
     out->stage=2;

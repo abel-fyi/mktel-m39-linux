@@ -47,7 +47,11 @@ limited development baseline is dependable. Do not bypass hardware protections.
 Kernel #19's serialized gauge endpoint is installed and boot-tested; the full
 boot-partition readback matched. Root/home unlock and automatic charging handoff
 passed. Three physical unplug/reconnect cycles on the same broker passed with
-no logged kernel gauge errors. Longer-run reliability remains unproven.
+no logged kernel gauge errors. Longer-run reliability remains unproven. The subsequent run stopped on a genuine
+vendor-lock collision (`Resource busy`), with charging OFF verified. A revised
+candidate now waits for the shared lock inside the original 30 ms acquisition
+budget; lock timeout and measurement/cleanup failures remain fatal. Six adapter
+scenarios, shared-core tests and kernel compilation passed; deployment is underway.
 
 Controlled `m39-poweroff` shut down on battery, confirmed by the user. USB
 insertion without power presses produced a fresh boot and the locked prompt.
