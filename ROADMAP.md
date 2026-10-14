@@ -51,7 +51,9 @@ hold. Source review confirms the four ADC callbacks do not access the gauge
 latch. A tested candidate keeps vendor dispatch serialized separately and uses
 the gauge mutex for all other commands (including unknown commands). Acquisition
 deadlines and fault handling are unchanged. Kernel build and seven adapter
-scenarios passed; kernel #22 deployment is underway. Evidence:
+scenarios passed; kernel #22 is installed with full readback verification.
+Root/home unlocked and persistence markers survived. The new 180-second probe
+is running with charging OFF; check its outcome after completion, not idle polls. Evidence:
 local `logs/gauge-lock-holder-probe-result.txt`.
 
 Kernel #21 is installed and verified, with a diagnostic record identifying the
