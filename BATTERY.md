@@ -113,7 +113,7 @@ Local `CURRENT-STATE.md` and logs hold the latest device state and detailed evid
 
 ## Installed automatic startup
 
-Boot-partition SHA-256: `8e1d027d742a844553b642f99c5167e6805b43f4d300d2f59a13dfa2b5c3fab1`.
+Boot-partition SHA-256: `521cc166b1e1945e78b18b9cf1727b88dc2aed86a1dbfea0cbb1b966b4e6e967`.
 Full readback matched. A software reboot started charging while root/home were
 locked; USB development unlock then restarted the broker on encrypted root. Both
 filesystem persistence markers survived and the temporary runtime key was removed.
@@ -127,8 +127,16 @@ Physical reconnect is therefore not yet validated for this broker. Instrumented
 fuel-gauge diagnostics distinguish acquisition contention from release failure,
 without changing retry/time bounds or charger controls. The cause remains unresolved.
 
-A kernel-side read-only lease record is being tested to identify reconnect rejection
+A kernel-side read-only lease record was installed and verified to identify reconnect rejection
 at the actual guard evaluation, rather than from later register reads. Its mask is
 identity=1, gates=2, CV=4, current=8, overvoltage=16. The original acceptance conditions,
 lease duration and watchdog are unchanged; exhaustive host guard tests pass.
 The hardware-off normalization did not resolve the observed reconnect failure.
+
+The corrected broker passed a physical USB unplug/reconnect test without reboot:
+the same broker recorded unplug, verified stop/released ownership, performed fresh
+watchdog validation, and started a new net-charging controller. The fixes lower
+only the confirmed 4.2 V standby CV to 3.9 V before claiming ownership and share
+detach-aware profile checks before and after sampling. Read failures, powered
+configuration changes, watchdog faults and unverified cleanup remain fatal.
+This pass does not prove the separate earlier fuel-gauge error resolved.
