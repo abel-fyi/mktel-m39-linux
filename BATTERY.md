@@ -1,175 +1,101 @@
 # Experimental battery support
 
-MKTEL M39, MT6737M/MT6328, removable BL-25BI battery: label 3.7 V,
-2500 mAh, maximum charge voltage 4.2 V. Normal-phone battery support is unfinished.
-Battery temperature sensing is deferred; PMIC-die temperature is not cell temperature.
+MKTEL M39 / MT6328, BL-25BI3.7V2500mAh, label maximum4.2V.
+**Charging reliability is unresolved.** The latest completed charging trial on
+kernel #22 aborted at uptime815 on a fuel-gauge release timeout. Charger OFF
+was verified. The charging-off1599-snapshot pass does not supersede this failure.
+See [acceptance checklist](BATTERY-MILESTONE.md) and [priorities](ROADMAP.md).
 
-Follow [the battery completion milestone](BATTERY-MILESTONE.md) for the agreed
-non-temperature scope, ordered work and hardware acceptance criteria.
+## Current limits and open failure
 
-## Current limits
+Nominal300mA (actual amperage uncalibrated), hardware/software ceiling3.9V,
+4-second hardware watchdog, nonextendable kernel lease,1770-second controllers
+and190-minute broker budget. Faults verify shutdown and latch without automatic
+retry. This is supervised experimental charging. Cell-temperature protection is
+unverified; PMIC-die temperature is not battery temperature.
 
-- Nominal charging setting: 300 mA. Actual amperage is not independently calibrated.
-- Hardware CV ceiling and software target: 3.9 V. This is not a full-charge claim.
-- Four-second hardware watchdog and independent, nonextendable kernel lease.
-- Each charging controller runs at most 1770 seconds.
-- Fresh ADC, input-voltage, regulation, PMIC-die and current-direction checks.
-- Faults stop charging and do not automatically retry.
+The release failure was `stage10 release_stage5 control0xc29`; a later read
+found idle0x29. The candidate uses the remaining original30ms acquisition
+budget for release confirmation instead of a separate5ms sub-window. Nine core
+fault tests and seven adapter scenarios passed. That is a scheduling-delay
+hypothesis, not a proven hardware fix. Actual release must still be confirmed;
+expired/invalid samples and failed cleanup remain fatal.
 
-The installed boot startup now launches the automatic bounded broker before
-encrypted unlock and restarts it after switching to encrypted root. Root transition
-waits for the old broker and startup to exit. Manual cancellation and fault latches
-survive the transition. The broker supports timed restarts and target/recharge
-policy with a 190-minute overall budget. It remains experimental and supervised.
-Older images without the broker retain the legacy single-session startup.
+Local image metadata, full-readback logs and `CURRENT-STATE.md` identify the
+installed version and live test state. Preserve old images; never overwrite
+an installed image's metadata with a candidate build.
 
-## Verified on hardware
+## Verified behavior and limits of the evidence
 
-- Alpine can run on battery and survive USB unplug/reconnect.
-- Charging starts at the locked encrypted-root prompt.
-- Software shutdown with USB attached returns to charger boot mode and starts
-  charging while root/home remain locked. Cold-off USB insertion is still untested.
-- Hardware watchdog expiry clears the charger enable gates.
-- Manual stop verifies charger-off and releases the lease.
-- The broker completed timed segments, stopped/released ownership, rested, then
-  validated watchdog cutoff and started distinct controllers automatically.
-- An ADC fault stopped the broker without retrying; charging-off was verified.
-- Keypad-wake backlight idle reduces load: raw signed fuel-gauge counts increased
-  from +216 to +485 with the display dark. These counts are not calibrated amperes.
-- Encrypted root/home and persistence markers survived shutdown/reboot/unlock.
+- Physical terminal, battery-only operation and encrypted root/home persistence work.
+- Three physical reconnect cycles passed on kernel #19; the latest version still
+  needs sustained validation and its own final reconnect regression.
+- Kernel #22 shutdown works on battery. With USB attached it starts a new USB
+  charging boot; root/home remain locked and positive charging was observed.
+- Cold-off USB insertion on #22 started positive charging without unlocking root.
+  This verifies startup with an available battery, not deeply depleted recovery.
+- Two #22 locked charging startups and root handoffs passed with one broker and
+  controller active. A synced1MiB storage write/read passed while charging.
+- Hardware watchdog expiry, manual stop and real fault shutdown were verified.
+- Backlight idle reduces load and is installed for future root startups; that
+  automatic next-boot path and physical wake still need final regression.
 
-The current broker test was last observed charging at 3.792 V. Actual target cutoff,
-hold and recharge have not yet been demonstrated on hardware. Several later timed
-segments passed without the earlier ADC fault recurring; its cause remains unknown.
+Actual3.9V cutoff/hold/recharge, calibrated current/taper termination, automatic
+low-battery shutdown and depleted-battery recovery remain incomplete. No percentage
+or full-charge claim is inferred from voltage. Temperature is a separate deferred
+milestone; completing the non-temperature checklist would not establish unattended
+charging suitability.
 
-## Commands
+## Ownership and transitions
 
-On the phone:
-
-```sh
-m39-charge status
-m39-battery-status
-m39-charge stop
-m39-charge arm
-m39-poweroff
-m39-screen on 30
-m39-screen off
-cat /run/m39-broker.json /run/m39-charge-status.json
-```
-
-`m39-poweroff` is the controlled shutdown path for the custom init: stop
-charging, verify OFF, sync/remount persistent storage read-only, then invoke
-kernel poweroff. Shutdown on battery and USB-attached shutdown were verified
-on kernel #22. USB attachment causes a fresh charging boot with storage locked.
-
-## Low-battery observer
-
-`/usr/local/libexec/m39/m39-low-battery-monitor.sh --observe` consumes existing
-fresh battery status; it performs no hardware reads, charging changes or poweroff.
-Runtime results are in `/run/m39-low-battery.json`. Missing/stale input data resets
-its debounce; repeated copies of one sample cannot satisfy the low-voltage test.
-Only three distinct low readings separated by at least five seconds, with USB
-absent, produce `shutdown_recommended`.
-
-The candidate cutoff is3.4V: a conservative development value above the prior
-3.3V diagnostic minimum and observed low-voltage boot failures. It is not a
-calibrated M39 cutoff, and **automatic shutdown is disabled** until independent
-voltage validation and a controlled end-to-end test. This observer is not
-low-battery recovery or completed discharge protection. Percentage remains unknown.
-
-`stop` also cancels pending startup and the explicit broker for this boot. `arm`
-explicitly validates and rearms the legacy bounded service. The broker is launched
-separately with `/usr/local/libexec/m39/m39-charge-broker.sh --run` for hardware
-validation, after other coordinators are stopped and ownership release is verified.
-Never start overlapping controllers or replace an executing shell script.
-
-The status tool reports fresh idle voltage/input presence from the broker's existing
-ADC snapshot, with boot identity, process birth time and sample-age checks. It
-reports policy phase separately from physical charging; no extra ADC reader is
-started. Active controllers retain their existing measurement path.
-
-The status tool validates boot/process identity and sample freshness, rejects invalid
-numeric records, and reports uncalibrated signed current counts. Percentage, capacity,
-full-charge state and cell temperature remain unavailable; none are inferred from CV.
-
-## Diagnostics and tests
-
-ADC errors emit `ADC_ERROR stage=N` on stderr and never produce a valid sample:
-
-| Stage | Failure |
+| Component | Responsibility |
 | --- | --- |
-| 1 / 2 | Identity read / unexpected chip |
-| 10–12 | Clock state acquisition |
-| 20–22 | Clock enable/readback |
-| 30 | ADC trigger |
-| 40–44 | Channel read |
-| 50–54 | ADC ready timeout |
-| 60 | Elapsed-time overrun |
-| 70–72 | Clock restoration |
-| 80 | Output write |
+| Boot/root startup | Starts one broker; respects manual-stop and fault flags. |
+| Broker | Target/recharge policy, segment budget and rest; calls explicit arm/stop. |
+| `m39-charge` | Validated arming, watchdog test and serialized manual stop. |
+| Plug service | Supervises one controller per connected charging session. |
+| Pulse controller | Current/voltage/input guards, watchdog refresh and verified cleanup. |
+| Kernel | Exclusive expiring charger lease; separate vendor dispatch/gauge locks. |
 
-The acquisition deadline remains 30 ms. A charging-off test passed 1000 consecutive
-snapshots. Host tests exercise the actual transaction's failure/cleanup paths and
-actual shell broker/status scripts, including stale/future/foreign records, PID reuse,
-cleanup failure, manual cancellation, timed restart, hysteresis and fault shutdown.
-Simulation does not prove physical cutoff/recharge or calibration.
+Unlock waits for old startup/broker/service cleanup before switching root. The
+new root starts its broker only if manual cancellation permits. Fault/manual
+flags survive this handoff. An explicit broker `--run` is fresh opt-in revalidation;
+`--startup` never clears a fault. Never overlap USB clients or charging owners.
 
-## Remaining work
+## Commands and reporting
 
-1. Verify actual 3.9 V cutoff, hold and recharge against independent measurements.
-2. Validate higher-voltage regulation and calibrated current/taper detection before
-   implementing full-charge termination. The existing completion callback reports
-   unsupported; CV detection alone is insufficient. Vendor current conversion needs
-   board-specific sense resistance and offset, which are not verified here.
-3. Verify low-battery recovery and cold-off plug-in charging end to end.
-4. Verify physical USB reconnect and target/recharge behavior with the boot-integrated
-   broker, then graduate the experimental overall time budget to normal operation.
-5. Calibrate charge percentage/capacity if reliable board/cell data can be established.
-6. Identify/calibrate battery temperature sensing and implement cell thermal protection.
+On the phone: `m39-battery-status`, `m39-charge status`, `m39-charge stop`,
+`m39-poweroff`, `m39-screen on 30`, `m39-screen off`.
+`m39-charge arm` starts the legacy bounded service; normal experimental startup
+uses `/usr/local/libexec/m39/m39-charge-broker.sh --startup`.
 
-Temperature work is last per user preference. Keep experimental charging supervised
-until cell thermal protection is established; voltage/current bounds do not supply it.
+Status rejects stale/foreign process records and uses existing broker ADC readings
+for idle voltage/input presence. It adds no ADC reader. Signed current is raw,
+uncalibrated; percentage, full and cell temperature remain unavailable.
+
+The optional `m39-low-battery-monitor.sh --observe` consumes this status and writes
+`/run/m39-low-battery.json`. It cannot power off or change charging. Three distinct
+low readings with USB absent produce `shutdown_recommended`; stale data/USB reset
+the debounce. Candidate3.4V cutoff needs independent validation. Automatic
+low-voltage shutdown is **disabled**. This observer is not low-battery recovery.
+
+## Immediate validation sequence
+
+1. Install/readback-test the release-budget candidate; verify boot, locked charging
+   and encrypted handoff. Do not declare the release failure fixed from boot alone.
+2. Complete a1770-second charging segment and clean transition without gauge faults;
+   repeat on another boot and physical reconnect before calling it dependable.
+3. Verify actual target cutoff/hold/recharge independently. Establish current/taper
+   calibration before higher-voltage/full-charge work; CV detection alone is insufficient.
+4. Validate low-battery shutdown/recovery and the remaining checklist regressions.
+
+During long trials the user monitors. Check at completion, fault or explicit request;
+no idle agent polling. Preserve watchdog/current/voltage bounds and fault shutdown.
 
 ## Recovery
 
-Preserve private eMMC backups, LUKS headers, keys, calibration partitions and boot areas.
-The verified manual-only recovery image is
-`artifacts/alpine-m39-source-battery-reporting-aux.partition.img`, SHA-256
-`0f98501b68365bc85c63f89f46b0e4a959ad460c17418c91515d6a318e04b9a9`.
-Artifacts/backups/credentials are excluded from Git. Flash only the checked boot
-partition with complete readback verification; do not blindly reuse old flash scripts.
-Local `CURRENT-STATE.md` and logs hold the latest device state and detailed evidence.
-
-## Installed automatic startup
-
-Boot-partition SHA-256: `73d8e0ce2418724fbbb3d16f450ef7212aa25262bb0ebe34eef6704e6dbec50f`.
-Kernel #22 separates vendor command serialization from gauge-latch locking.
-A charging-off180-second probe passed1599 snapshots with no logged gauge errors;
-longer charging reliability remains under test. Deadlines and fault shutdown
-are unchanged.
-Full readback matched. A software reboot started charging while root/home were
-locked; USB development unlock then restarted the broker on encrypted root. Both
-filesystem persistence markers survived and the temporary runtime key was removed.
-Two implementation faults were fixed and tested: overlapping stop signals during
-cleanup, and stale service status being mistaken for a newly started controller.
-Actual 3.9 V cutoff/recharge and full-charge termination are still unverified.
-
-The boot-integrated broker's first physical reconnect test stopped on a fuel-gauge
-acquisition/release failure; charger-off was verified and no automatic retry occurred.
-Physical reconnect is therefore not yet validated for this broker. Instrumented
-fuel-gauge diagnostics distinguish acquisition contention from release failure,
-without changing retry/time bounds or charger controls. The cause remains unresolved.
-
-A kernel-side read-only lease record was installed and verified to identify reconnect rejection
-at the actual guard evaluation, rather than from later register reads. Its mask is
-identity=1, gates=2, CV=4, current=8, overvoltage=16. The original acceptance conditions,
-lease duration and watchdog are unchanged; exhaustive host guard tests pass.
-The hardware-off normalization did not resolve the observed reconnect failure.
-
-The corrected broker passed a physical USB unplug/reconnect test without reboot:
-the same broker recorded unplug, verified stop/released ownership, performed fresh
-watchdog validation, and started a new net-charging controller. The fixes lower
-only the confirmed 4.2 V standby CV to 3.9 V before claiming ownership and share
-detach-aware profile checks before and after sampling. Read failures, powered
-configuration changes, watchdog faults and unverified cleanup remain fatal.
-This pass does not prove the separate earlier fuel-gauge error resolved.
+Preserve encrypted data, private eMMC/LUKS backups, keys and calibration partitions.
+Manual-only rescue: `artifacts/alpine-m39-source-battery-reporting-aux.partition.img`,
+SHA256 `0f98501b68365bc85c63f89f46b0e4a959ad460c17418c91515d6a318e04b9a9`.
+Flash only the reviewed boot partition with complete readback verification.
+Historical research in `analysis/CHARGING.md` is not current status.

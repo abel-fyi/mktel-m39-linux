@@ -44,58 +44,25 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
-Latest run: kernel #22 controller7736 aborted at uptime815 on the original
-release timeout (`stage10`, `release_stage5`, control0xc29). Charging OFF was
-verified. A later read found control0x29 (idle). ADC lock contention was fixed,
-but this release failure remains unresolved. Evidence:
-local `logs/voltage-check-and-fault.txt` and `logs/voltage-reference-shutdown-launch.txt`.
+**Charging reliability remains unresolved.** Kernel #22's latest charging trial
+aborted at uptime815 on release timeout; charger OFF was verified. Its earlier
+1599 charging-off snapshots do not prove charging reliability. ADC-lock contention
+was separately fixed. Evidence: local `logs/voltage-check-and-fault.txt`.
 
-Settled charging-off ADC voltage was3480mV. A45-second delayed shutdown
-(PID23445) was launched; user asked to unplug, wait1 minute, remove the battery
-and measure+/- on20V DC, then leave disconnected. Await that reading; do not
-replay the shutdown job. Exact simultaneous loaded-voltage calibration is not
-possible from a removed-pack reading; treat it as a sanity comparison.
+The release-budget candidate compiled and passed nine core/seven adapter fault
+cases. It uses the remaining original30ms budget for actual release confirmation;
+no timing-invalid sample is accepted and cleanup failures stay fatal. Installation
+and hardware validation are in progress; boot success is not reliability proof.
 
-A candidate allows release confirmation to use the remaining original30ms
-acquisition budget instead of its separate5ms sub-window. Nine core fault tests
-passed, including simulated6ms scheduling delay and rejection after the total
-deadline. Kernel compiled and `alpine-m39-gauge-release-budget-encrypted` image
-packaged/verified; NOT installed. Guards still require actual release confirmation
-and valid timing; cleanup/read failures stay fatal. Hardware validation pending.
+Independent removed-pack reading3.45V versus prior charging-off ADC3.480V is a
+sanity comparison under different conditions, not current/threshold calibration.
+The low-battery monitor is observation-only; no automatic cutoff is enabled.
 
-Observation-only low-battery monitor is implemented, tested and installed in
-root; PID5024 reports externally powered. It uses existing fresh status, counts
-three distinct low readings, resets on stale data/USB input, and cannot call
-poweroff. Candidate3.4V cutoff remains unvalidated; automatic shutdown is OFF.
-Public status now exposes external input from a fresh, positive charging sample.
-At uptime608 the current charging controller7736 remained healthy at3539mV,
-raw current+462, backlight0. Evidence: local `logs/low-battery-observer-installed.txt`.
-User has a possible DMM8900; exact variant not confirmed. Manufacturer series
-manual: https://www.all-sun.com/manual/DMM8900_en.pdf . mA input below200mA,
-10A input unfused/time-limited; do not improvise current probing across a cell.
-Independent current/taper calibration remains a blocker for full-charge validation.
-
-Kernel #22 is installed and boot-tested. Charging-off gauge probing passed1599
-snapshots over180 seconds. The prior ADC-lock conflict is corrected; longer
-charging reliability remains unverified.
-
-USB-attached shutdown and cold-off USB insertion both produced fresh boots and
-positive charging while root/home remained locked. Two kernel #22 startups and
-root handoffs passed, each with one broker/controller. Root/home persistence and
-a synced1MiB storage write/read passed. Relevant local evidence:
-`logs/kernel22-cold-off-charging.txt`, `logs/kernel22-cold-off-root-verified.txt`,
-`logs/usb-shutdown-root-and-io-verified.txt`.
-
-Current boot `ecf543c7-1edb-4a03-90c1-d10a93c47978` is unlocked and charging;
-broker7239/controller7736 were observed positive at uptime192. The user watcher
-is restored. Screen idle30s is currently enabled. Root init now starts it
-on future unlocks; installed by atomic rename, with prior init preserved.
-Its next-boot behavior still needs testing. No boot-image change for this addition.
-
-Next: let the current bounded segment run while the user monitors; inspect at
-~30 minutes or reported fault. Then validate actual cutoff/recharge, low-battery
-recovery and remaining reporting/calibration requirements. Do not raise limits
-or spend agent turns polling elapsed charging time.
+Next: one reproducible failure, this justified candidate, then sustained charging
+validation. No new battery features until it holds. After a clean1770-second
+segment, repeat boot/reconnect and move to actual cutoff/recharge. Full-charge
+termination and depleted recovery remain unverified. [BATTERY.md](BATTERY.md)
+explains ownership; local `CURRENT-STATE.md` holds exact live versions and jobs.
 
 ## Working agreement
 
