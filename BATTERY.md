@@ -178,3 +178,12 @@ at 3.642 V. Charger-off was verified, the lease was released, and the broker exi
 without retrying. The previous guard completed promptly with watchdog healthy;
 this evidence does not identify which ADC operation failed. Automatic timed
 restart and target/recharge remain unverified.
+
+ADC diagnostics now distinguish identity (1/2), clock-save (10–12), clock-enable
+(20–22), trigger (30), channel-read (40–44), ready timeout (50–54), elapsed-time
+overrun (60), clock-restoration (70–72), and output failure (80). Failures emit
+`ADC_ERROR stage=N` on stderr with no valid sample; the 30 ms deadline and allowed
+register writes are unchanged. Fault-injection tests verify stage codes and cleanup.
+1,000 consecutive charging-off hardware snapshots passed. This does not prove the
+earlier fault resolved. A fresh explicitly launched watchdog-validated broker run
+uses the instrumented helper and transition history, with unchanged charge limits.

@@ -18,22 +18,24 @@ static int adc_snapshot(const struct adc_io *p,unsigned out[5]) {
  static const unsigned channels[5]={0xe2e,0xe32,0xe04,0xe06,0xe08};
  unsigned saved[3],raw[5],chip;
  int rc=0;
- if(p->read(0x200,&chip)||(chip>>8)!=0x28)return -1;
- for(unsigned i=0;i<3;i++)if(p->read(clocks[i],saved+i))return -1;
- for(unsigned i=0;i<3;i++)if(field(p,clocks[i],masks[i],masks[i])){rc=-1;break;}
- if(!rc && p->write(0xe8a,31))rc=-1;
+ /* Positive stage codes are reported on stderr, never as valid samples. */
+ if(p->read(0x200,&chip))return 1;
+ if((chip>>8)!=0x28)return 2;
+ for(unsigned i=0;i<3;i++)if(p->read(clocks[i],saved+i))return 10+i;
+ for(unsigned i=0;i<3;i++)if(field(p,clocks[i],masks[i],masks[i])){rc=20+i;break;}
+ if(!rc && p->write(0xe8a,31))rc=30;
  u64 end=p->now()+30000000ULL;
  for(unsigned i=0;!rc && i<5;i++) {
   for(;;) {
-   if(p->read(channels[i],raw+i)){rc=-1;break;}
+   if(p->read(channels[i],raw+i)){rc=40+i;break;}
    if(raw[i]&32768)break;
-   if(p->now()>=end){rc=-1;break;}
+   if(p->now()>=end){rc=50+i;break;}
    p->pause();
   }
  }
- if(p->now()>=end)rc=-1;
+ if(!rc && p->now()>=end)rc=60;
  /* Restore only changed clock bits, even after acquisition failure. */
- for(unsigned i=0;i<3;i++)if(field(p,clocks[i],masks[i],saved[i]))rc=-1;
+ for(unsigned i=0;i<3;i++)if(field(p,clocks[i],masks[i],saved[i]))rc=70+i;
  if(rc)return rc;
  out[0]=(raw[0]&32767)*5400/32768;
  out[1]=(raw[1]&32767)*5400/32768;
@@ -109,8 +111,13 @@ void _start(void) {
  if(!rc) {
   char out[64];unsigned n=0;
   for(unsigned i=0;i<5;i++){n+=decimal(out+n,values[i]);out[n++]=i==4?'\n':' ';}
-  if(sc(64,1,(long)out,n,0)!=n)rc=-1;
+  if(sc(64,1,(long)out,n,0)!=n)rc=80;
  }
- sc(93,rc?1:0,0,0,0);for(;;){}
+ if(rc) {
+  char error[32]="ADC_ERROR stage=";
+  unsigned n=16;n+=decimal(error+n,(unsigned)rc);error[n++]='\n';
+  sc(64,2,(long)error,n,0);
+ }
+ sc(93,rc,0,0,0);for(;;){}
 }
 #endif

@@ -39,6 +39,8 @@ int main(void){
   unsigned out[5]={99,99,99,99,99};
   int rc=adc_snapshot(&p,out);
   assert((rc==0)==(fault==0));
+  const int expected[6]={0,50,41,30,72,2};
+  assert(rc==expected[fault]);
   if(fault==5)assert(writes==0);
   else {assert(changed==3);assert(restored==3);}
   if(fault)assert(out[0]==99);
