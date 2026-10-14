@@ -172,3 +172,9 @@ Monitor with `cat /run/m39-broker.json; cat /run/m39-charge-status.json` on the 
 Future broker runs log timestamped JSON only when phase, controller or reason
 changes. Integration tests verify cutoff/fault history and the timed-rest phase.
 The running hardware test was not replaced to install this logging change.
+
+The first broker hardware run stopped on a fresh-ADC acquisition/restoration error
+at 3.642 V. Charger-off was verified, the lease was released, and the broker exited
+without retrying. The previous guard completed promptly with watchdog healthy;
+this evidence does not identify which ADC operation failed. Automatic timed
+restart and target/recharge remain unverified.
