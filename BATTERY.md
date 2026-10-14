@@ -4,6 +4,9 @@ MKTEL M39, MT6737M/MT6328, removable BL-25BI battery: label 3.7 V,
 2500 mAh, maximum charge voltage 4.2 V. Normal-phone battery support is unfinished.
 Battery temperature sensing is deferred; PMIC-die temperature is not cell temperature.
 
+Follow [the battery completion milestone](BATTERY-MILESTONE.md) for the agreed
+non-temperature scope, ordered work and hardware acceptance criteria.
+
 ## Current limits
 
 - Nominal charging setting: 300 mA. Actual amperage is not independently calibrated.

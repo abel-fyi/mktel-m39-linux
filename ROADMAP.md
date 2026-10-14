@@ -19,6 +19,10 @@ Preserve recovery paths and document experimental limitations.
 
 ## Ordered milestones
 
+Battery acceptance criteria and work order are in
+[BATTERY-MILESTONE.md](BATTERY-MILESTONE.md). Temperature is explicitly excluded
+from that completion scope and remains a separate limitation.
+
 1. **Dependable development baseline.** Diagnose and fix or safely handle the
    fuel-gauge release failure, establish reliable shutdown, and preserve
    encrypted boot. Require repeatable hardware results before declaring success.
