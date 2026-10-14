@@ -9,7 +9,7 @@ struct io {
     u64 (*now)(void);
     void (*pause)(void);
 };
-struct result { unsigned raw, attempts; };
+struct result { unsigned raw, attempts, stage; };
 
 static int release(const struct io *p, u64 deadline) {
     unsigned control;
@@ -29,24 +29,33 @@ static int release(const struct io *p, u64 deadline) {
 static int snapshot(const struct io *p, struct result *out) {
     unsigned identity, control, raw;
     u64 finish = p->now() + 30000000ULL;
-    if (p->read(0x200, &identity) || (identity >> 8) != 0x28) return -1;
+    out->stage=1;
+    if (p->read(0x200, &identity)) return -1;
+    out->stage=2;
+    if ((identity >> 8) != 0x28) return -1;
     for (unsigned attempt = 1; attempt <= 3; attempt++) {
+        out->attempts=attempt;
         do {
+            out->stage=3;
             if (p->read(0xca4, &control)) return -1;
             if (!(control & 0xff00)) break;
+            out->stage=4;
             if (p->now() >= finish) return -1;
             p->pause();
         } while (1);
+        out->stage=9;
         if (p->now() >= finish) return -1;
         if (p->write_control((control & 255) | 0x200)) {
-            release(p, p->now() + 5000000ULL);
+            out->stage=release(p, p->now() + 5000000ULL)?10:5;
             return -1;
         }
         int complete = 0, io_failed = 0;
         u64 ready_deadline = p->now() + 5000000ULL;
         do {
+            out->stage=6;
             if (p->read(0xca4, &control)) { io_failed = 1; break; }
             if (control & 0x400) {
+                out->stage=7;
                 if (p->read(0xcb2, &raw) || p->read(0xca4, &control)) {
                     io_failed = 1;
                 } else {
@@ -56,12 +65,15 @@ static int snapshot(const struct io *p, struct result *out) {
             }
             p->pause();
         } while (p->now() < ready_deadline && p->now() < finish);
-        if (release(p, p->now() + 5000000ULL) || io_failed) return -1;
+        if (release(p, p->now() + 5000000ULL)) { out->stage=10; return -1; }
+        if (io_failed) return -1;
         if (complete && p->now() < finish) {
             out->raw = raw;
             out->attempts = attempt;
+            out->stage=0;
             return 0;
         }
+        out->stage=complete?9:8;
     }
     return -1;
 }
@@ -106,8 +118,8 @@ int main(int argc, char **argv) {
     struct io p = {read_reg, write_control, now, pause_io};
     struct result r = {0};
     int rc = snapshot(&p, &r);
-    printf("rc=%d raw=%u requests=%u clears=%u low_changes=%u ctrl=%u ticks=%llu failed_reads=%u\n",
-           rc, r.raw, requests, clears, changes, ctrl, ticks, failed_reads);
+    printf("rc=%d raw=%u requests=%u clears=%u low_changes=%u ctrl=%u ticks=%llu failed_reads=%u stage=%u\n",
+           rc, r.raw, requests, clears, changes, ctrl, ticks, failed_reads,r.stage);
     return 0;
 }
 #else
@@ -172,17 +184,19 @@ static unsigned decimal(char *buffer, unsigned value) {
 }
 void _start(void) {
     static const struct io p = {read_reg,write_control,now,pause_io};
-    struct result r;
+    struct result r={0};
     int rc=snapshot(&p,&r);
     if (!rc) {
         char output[32]; unsigned n=decimal(output,r.raw); output[n++]=' ';
         if (r.raw>32767) {output[n++]='-'; n+=decimal(output+n,65535-r.raw);}
         else n+=decimal(output+n,r.raw);
         output[n++]='\n';
-        if (sc(64,1,(long)output,n,0)!=n) rc=-1;
-    } else {
-        static const char message[]="Fuel gauge snapshot unavailable; bounded acquisition/release failed.\n";
-        sc(64,2,(long)message,sizeof(message)-1,0);
+        if (sc(64,1,(long)output,n,0)!=n) { rc=-1;r.stage=11; }
+    }
+    if (rc) {
+        char error[64]="FG_ERROR stage=";unsigned n=15;
+        n+=decimal(error+n,r.stage);error[n++]='\n';
+        sc(64,2,(long)error,n,0);
     }
     sc(93,rc ? 1 : 0,0,0,0);
     for (;;) {}

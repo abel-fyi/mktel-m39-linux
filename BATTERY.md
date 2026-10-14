@@ -120,3 +120,9 @@ filesystem persistence markers survived and the temporary runtime key was remove
 Two implementation faults were fixed and tested: overlapping stop signals during
 cleanup, and stale service status being mistaken for a newly started controller.
 Actual 3.9 V cutoff/recharge and full-charge termination are still unverified.
+
+The boot-integrated broker's first physical reconnect test stopped on a fuel-gauge
+acquisition/release failure; charger-off was verified and no automatic retry occurred.
+Physical reconnect is therefore not yet validated for this broker. Instrumented
+fuel-gauge diagnostics distinguish acquisition contention from release failure,
+without changing retry/time bounds or charger controls. The cause remains unresolved.

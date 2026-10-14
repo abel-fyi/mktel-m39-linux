@@ -36,12 +36,14 @@ class GaugeChecks(unittest.TestCase):
         self.assertEqual(result['rc'], -1)
         self.assertEqual(result['requests'], 0)
         self.assertEqual(result['clears'], 0)
+        self.assertEqual(result['stage'], 4)
         self.assertLess(result['ticks'], 31000000)
 
     def test_never_ready_fails_with_bounded_retries_and_releases(self):
         result = self.sample('never-ready')
         self.assertEqual(result['rc'], -1)
         self.assertEqual(result['requests'], 3)
+        self.assertEqual(result['stage'], 8)
         self.assertEqual(result['clears'], 3)
         self.assertEqual(result['ctrl'], 0x29)
         self.assertLess(result['ticks'], 30000000)
@@ -53,9 +55,11 @@ class GaugeChecks(unittest.TestCase):
                 self.assertEqual(result['rc'], -1)
                 self.assertEqual(result['requests'], 1)
                 self.assertEqual(result['clears'], 1)
+                self.assertEqual(result['stage'], 7 if scenario=='read-error' else 10)
 
     def test_wrong_chip_causes_no_measurement_writes(self):
         result = self.sample('wrong-chip')
+        self.assertEqual(result['stage'], 2)
         self.assertEqual(result['rc'], -1)
         self.assertEqual(result['requests'], 0)
 
