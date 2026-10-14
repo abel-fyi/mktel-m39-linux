@@ -127,3 +127,23 @@ An experimental automatic policy broker is staged but disabled. Integration test
 cover cutoff/hold/recharge hysteresis, unplug/reconnect, exclusive ADC access and
 fault shutdown without retries. Hardware cutoff and recharge still need testing;
 the prototype retains an overall time budget and does not provide full charging.
+
+## Automatic broker guard validation
+
+The disabled broker rejects stale or future-dated records, foreign boot/controller
+identities, reused PIDs, unverified shutdown and changed voltage limits. Actual
+shell integration tests also cover clean timed restart and operator cancellation.
+Checks use explicit failure exits: `set -e` alone does not reject every failed
+command in an AND list. These changes do not alter the active charging limits.
+
+## Full-charge detector work still required
+
+The local vendor source exposes a CV detector at CHR_CON2 (`0x0f4c`), bit 6;
+CV detection alone does not prove full charge. The linear-charging implementation
+uses repeated calibrated charge-current readings for termination. Its current
+conversion uses sense-minus-battery voltage, a measured offset and a board-specific
+sense resistance. Neither that resistance/offset nor fuel-gauge amperage conversion
+is verified for this board. Thus raw counts cannot yet define a termination-current
+threshold. Next validate the 3.9 V cutoff against an independent meter, characterize
+CV/taper and current calibration, then implement and test full-charge termination.
+The existing higher-level completion callback deliberately reports unsupported.

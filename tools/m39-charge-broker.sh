@@ -58,14 +58,18 @@ while :; do
  if [ "$(( $(clock) - started ))" -ge 11400 ]; then reason=run_budget; status budget_exhausted; exit 0; fi
  if [ -n "$controller" ]; then
   cp "$runtime/m39-charge-status.json" "$snapshot"
-  [ "$(field boot_id)" = "$boot" ] && [ "$(field pid)" = "$controller" ]
+  [ "$(field boot_id)" = "$boot" ] && [ "$(field pid)" = "$controller" ] || exit 1
+  stamp=$(field uptime_seconds)
+  case "$stamp" in ''|*[!0-9]*) exit 1;; esac
+  age=$(( $(clock) - stamp ))
+  [ "$age" -ge 0 ] && [ "$age" -le 5 ] || exit 1
+  if [ -r "$proc_root/$controller/stat" ]; then
+   [ "$(awk '{print $22}' "$proc_root/$controller/stat")" = "$controller_start" ]
+  fi
   terminal_phase=$(field phase)
   case "$terminal_phase" in
    preparing|charging)
     [ -r "$proc_root/$controller/stat" ]
-    [ "$(awk '{print $22}' "$proc_root/$controller/stat")" = "$controller_start" ]
-    age=$(( $(clock) - $(field uptime_seconds) ))
-    [ "$age" -ge 0 ] && [ "$age" -le 5 ]
     status "$terminal_phase"
     "$pause" 2
     continue ;;

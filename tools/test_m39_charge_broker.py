@@ -51,7 +51,44 @@ else:
   assert json.loads((p/'m39-broker.json').read_text())['phase']=='fault'
   assert (p/'owner').read_text().strip()=='0'
   assert (p/'calls').read_text().count('arm')==count,'Fault was retried'
+  # A clean timed segment gets fresh validation, rather than extending a lease.
+  (p/'m39-broker.json').unlink()
+  proc=subprocess.Popen(['sh',str(root/'m39-charge-broker.sh'),'--run'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+  await_phase('charging');count=(p/'calls').read_text().count('arm')
+  publish(stop_reason='time_limit',battery_mv=3700)
+  end=time.monotonic()+5
+  while (p/'calls').read_text().count('arm')==count and time.monotonic()<end:time.sleep(.01)
+  await_phase('charging');assert (p/'calls').read_text().count('arm')==count+1
+  (p/'m39-charge-startup.disabled').touch()
+  out,err=proc.communicate(timeout=5)
+  assert proc.returncode==0,(out,err)
+  assert json.loads((p/'m39-broker.json').read_text())['phase']=='cancelled'
+  assert (p/'owner').read_text().strip()=='0'
+  # Terminal records must be fresh, from the correct boot/controller, and OFF.
+  for changes in [dict(uptime_seconds=94),dict(uptime_seconds=101),
+                  dict(phase='charging',uptime_seconds=94),
+                  dict(boot_id='another-boot'),dict(pid=worker.pid+1),
+                  dict(charging_off_verified=False),dict(voltage_limit_mv=4200)]:
+   (p/'m39-broker.json').unlink()
+   proc=subprocess.Popen(['sh',str(root/'m39-charge-broker.sh'),'--run'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+   await_phase('charging');count=(p/'calls').read_text().count('arm')
+   publish(stop_reason='time_limit',battery_mv=3700,**changes)
+   try:out,err=proc.communicate(timeout=5)
+   except subprocess.TimeoutExpired:
+    raise AssertionError(('Broker did not reject completion',changes,(p/'m39-charge-status.json').read_text(),(p/'m39-broker.json').read_text()))
+   assert proc.returncode!=0,(changes,out,err)
+   assert (p/'owner').read_text().strip()=='0'
+   assert (p/'calls').read_text().count('arm')==count,('Invalid completion retried',changes)
+  (p/'m39-broker.json').unlink()
+  proc=subprocess.Popen(['sh',str(root/'m39-charge-broker.sh'),'--run'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+  await_phase('charging');count=(p/'calls').read_text().count('arm')
+  stat=p/f'proc/{worker.pid}/stat';words=stat.read_text().split();words[21]=str(int(words[21])+1)
+  stat.write_text(' '.join(words)+'\n')
+  out,err=proc.communicate(timeout=5)
+  assert proc.returncode!=0,(out,err)
+  assert (p/'owner').read_text().strip()=='0'
+  assert (p/'calls').read_text().count('arm')==count,'Reused controller PID retried'
  finally:
   if proc.poll() is None:proc.terminate();proc.communicate(timeout=5)
   worker.terminate();worker.wait()
-print('PASS: initial high-voltage hold, cutoff relaxation hysteresis, recharge, no concurrent ADC, fault stop/no retry.')
+print('PASS: hold/recharge, exclusive ADC, unplug/reconnect, timed restart, operator cancellation, stale/foreign/unverified completion and fault shutdown.')
