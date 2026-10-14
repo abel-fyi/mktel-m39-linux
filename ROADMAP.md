@@ -44,6 +44,13 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
+Latest check: kernel #20's run **failed** at uptime215 with `Resource busy`
+from the gauge endpoint, despite the bounded lock wait. Charging OFF was
+verified; no restart performed. The next investigation is which vendor gauge
+command holds the shared lock beyond the deadline. Prior deployment observations
+below remain valid, but the reliability run is no longer active. Evidence:
+local `logs/gauge-bounded-lock-progress.txt`.
+
 Kernel #19's serialized gauge endpoint is installed and boot-tested; the full
 boot-partition readback matched. Root/home unlock and automatic charging handoff
 passed. Three physical unplug/reconnect cycles on the same broker passed with
@@ -54,7 +61,7 @@ budget; lock timeout and measurement/cleanup failures remain fatal. Six adapter
 scenarios, shared-core tests and kernel compilation passed. Kernel #20 is now
 installed with full readback verification; boot/root handoff passed and positive
 charging was observed at uptime83 (3514 mV, raw current+224). The bounded
-reliability run is active; the user monitors. Do not poll it until a fault,
+reliability run subsequently failed; charging is stopped. Do not poll it until a fault,
 reported completion, or the first segment milestone (~30 minutes).
 
 Controlled `m39-poweroff` shut down on battery, confirmed by the user. USB
@@ -65,7 +72,7 @@ therefore only partially validated, not complete.
 
 Current boot `6ff52c18-e2f3-442e-ae51-c4661b4da2f4` is unlocked automatically.
 Root/home persistence markers survived; temporary key removed. Broker1964 and
-controller2462 are charging; screen idle is enabled after30 seconds. Public
+controller2462 are stopped after a fault; screen idle is enabled after30 seconds. Public
 status now reports fresh idle broker measurements with process/freshness checks.
 Evidence: local `logs/gauge-bounded-lock-root-verified.txt` and
 `logs/gauge-bounded-lock-boot-readback.txt`.
