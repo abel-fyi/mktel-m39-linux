@@ -38,6 +38,9 @@ arm)
     done
     # A fresh hardware-cutoff test is required after every boot. The test
     # intentionally lets the unchanged four-second watchdog expire.
+    # Ownership being zero does not prove the hardware gates stayed off during
+    # a reconnect. Establish and verify OFF through the kernel before claiming.
+    write_owner 0
     write_owner 60
     if ! M39_SUPERVISED=1 /run/m39-pmic-pulse.sh --watchdog-test-3900 200 \
             > /run/m39-arm-watchdog.log 2>&1; then
