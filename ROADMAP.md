@@ -44,6 +44,16 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
+The charging-off probe on kernel #21 failed after one successful sample. Its
+timeout trace recorded vendor command5 (battery-voltage AUXADC), with current
+holder ages153/1711 microseconds: contention, not proof of one continuous long
+hold. Source review confirms the four ADC callbacks do not access the gauge
+latch. A tested candidate keeps vendor dispatch serialized separately and uses
+the gauge mutex for all other commands (including unknown commands). Acquisition
+deadlines and fault handling are unchanged. Kernel build and seven adapter
+scenarios passed; kernel #22 deployment is underway. Evidence:
+local `logs/gauge-lock-holder-probe-result.txt`.
+
 Kernel #21 is installed and verified, with a diagnostic record identifying the
 vendor command and hold duration at lock timeout. Encrypted root/home survived
 and unlocked automatically. Charging is OFF. A maximum180-second raw gauge
