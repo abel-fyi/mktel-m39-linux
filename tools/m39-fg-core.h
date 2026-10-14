@@ -61,7 +61,7 @@ static int m39_fg_snapshot(const struct m39_fg_io *p, struct m39_fg_result *out,
         out->stage=9;
         if (p->now() >= finish) return -1;
         if (p->write_control((control & 255) | 0x200)) {
-            out->stage=m39_fg_release(p, p->now() + 5000000ULL, out)?10:5;
+            out->stage=m39_fg_release(p, finish, out)?10:5;
             return -1;
         }
         ready_deadline = p->now() + 5000000ULL;
@@ -79,7 +79,7 @@ static int m39_fg_snapshot(const struct m39_fg_io *p, struct m39_fg_result *out,
             }
             p->pause();
         } while (p->now() < ready_deadline && p->now() < finish);
-        if (m39_fg_release(p, p->now() + 5000000ULL, out)) { out->stage=10; return -1; }
+        if (m39_fg_release(p, finish, out)) { out->stage=10; return -1; }
         if (io_failed) return -1;
         if (complete && p->now() < finish) {
             out->raw = raw;

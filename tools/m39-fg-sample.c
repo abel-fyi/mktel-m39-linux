@@ -7,7 +7,15 @@ static unsigned ctrl = 0x29, requests, clears, changes, failed_reads;
 static u64 ticks;
 static const char *scenario;
 static u64 now(void) { return ticks; }
-static void pause_io(void) { ticks += 100000ULL; }
+static void pause_io(void) {
+    int delayed = !strcmp(scenario, "release-scheduled-late") ||
+        !strcmp(scenario, "release-scheduled-expired");
+    if (delayed && (ctrl & 0x800)) {
+        ticks += !strcmp(scenario, "release-scheduled-expired") ?
+            31000000ULL : 6000000ULL;
+        ctrl &= ~0x400;
+    } else ticks += 100000ULL;
+}
 static int read_reg(unsigned address, unsigned *value) {
     ticks += 1000;
     if (address == 0x200) {
@@ -30,6 +38,11 @@ static int write_control(unsigned value) {
         clears++;
         if (!strcmp(scenario, "release-error")) return -1;
         if (!strcmp(scenario, "release-timeout")) return 0;
+        if (!strcmp(scenario, "release-scheduled-late") ||
+            !strcmp(scenario, "release-scheduled-expired")) {
+            ctrl = (value & 255) | 0xc00;
+            return 0;
+        }
         ctrl = value & 255;
     } else ctrl = value;
     return 0;

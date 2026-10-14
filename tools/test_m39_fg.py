@@ -65,8 +65,26 @@ class GaugeChecks(unittest.TestCase):
                 self.assertEqual(result['stage'], 10)
                 self.assertEqual(result['release_stage'], detail)
                 self.assertEqual(result['release_control'], 0x629)
-                self.assertLess(result['ticks'], 30000000)
+                self.assertLess(result['ticks'], 31000000)
                 self.assertEqual(result['requests'], 1)
+
+    def test_delayed_release_ack_uses_remaining_total_budget(self):
+        result = self.sample('release-scheduled-late')
+        self.assertEqual(result['rc'], 0)
+        self.assertEqual(result['ctrl'], 0x29)
+        self.assertEqual(result['requests'], 1)
+        self.assertEqual(result['clears'], 1)
+        self.assertEqual(result['low_changes'], 0)
+        self.assertGreaterEqual(result['ticks'], 6000000)
+        self.assertLess(result['ticks'], 30000000)
+
+    def test_ack_after_total_deadline_is_never_valid_current(self):
+        result = self.sample('release-scheduled-expired')
+        self.assertEqual(result['rc'], -1)
+        self.assertEqual(result['stage'], 10)
+        self.assertEqual(result['release_stage'], 5)
+        self.assertEqual(result['requests'], 1)
+        self.assertGreater(result['ticks'], 30000000)
 
     def test_wrong_chip_causes_no_measurement_writes(self):
         result = self.sample('wrong-chip')
