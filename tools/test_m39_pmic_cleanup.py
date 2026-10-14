@@ -76,6 +76,15 @@ saved_f66=0
         _, _, state = self.run_cleanup(source=True,fail_off=True,vbus=728,exit_code=1,reason='regulation_disabled')
         self.assertFalse(state['charging_off_verified'])
 
+    def test_power_profile_change_requires_verified_input_loss(self):
+        for vbus,failed_sample,failed_off,phase in [(889,False,False,'stopped'),
+            (5100,False,False,'aborted'),(889,True,False,'off_restore_failed'),
+            (889,False,True,'off_unverified')]:
+            _,_,state=self.run_cleanup(source=True,vbus=vbus,sample_failure=failed_sample,
+                fail_off=failed_off,exit_code=1,reason='power_profile_changed')
+            self.assertEqual(state['phase'],phase)
+            if phase=='stopped':self.assertEqual(state['stop_reason'],'unplugged')
+
     def test_unplug_does_not_hide_unrelated_fault(self):
         _, _, state = self.run_cleanup(source=True, vbus=113, exit_code=1, reason='fault')
         self.assertEqual(state['phase'], 'aborted')
