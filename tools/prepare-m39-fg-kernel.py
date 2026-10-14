@@ -23,4 +23,13 @@ if include not in source:
     assert function.count(needle) == 1
     function = function.replace(needle, '\t} else\n\t\tstatus = STATUS_UNSUPPORTED;\n\n\tmutex_unlock(&m39_fg_lock);\n\treturn status;')
     path.write_text(prefix + function)
+source = path.read_text()
+if 'WRITE_ONCE(m39_fg_vendor_cmd, cmd)' not in source:
+    needle = '\tmutex_lock(&m39_fg_lock);'
+    assert source.count(needle) == 1
+    source = source.replace(needle, needle + '\n\tWRITE_ONCE(m39_fg_vendor_started, m39_fg_now());\n\tWRITE_ONCE(m39_fg_vendor_cmd, cmd);')
+    needle = '\tmutex_unlock(&m39_fg_lock);'
+    assert source.count(needle) == 1
+    source = source.replace(needle, '\tWRITE_ONCE(m39_fg_vendor_cmd, -1);\n' + needle)
+    path.write_text(source)
 print('Prepared serialized bounded raw gauge endpoint; no charger limits changed.')

@@ -7,6 +7,19 @@
 #include "m39-fg-core.h"
 
 static DEFINE_MUTEX(m39_fg_lock);
+static int m39_fg_vendor_cmd = -1;
+static u64 m39_fg_vendor_started;
+
+static void m39_fg_lock_timeout(void)
+{
+    int command = READ_ONCE(m39_fg_vendor_cmd);
+    u64 started = READ_ONCE(m39_fg_vendor_started);
+    u64 now = ktime_to_ns(ktime_get());
+    /* Diagnostic observation only: the holder may finish during this read. */
+    pr_err("M39_FG_LOCK_TIMEOUT vendor_cmd=%d held_us=%llu\n", command,
+           command >= 0 && now >= started ?
+           (unsigned long long)((now - started) / 1000) : 0ULL);
+}
 
 static int m39_fg_read(unsigned address, unsigned *value)
 {
@@ -38,8 +51,10 @@ static int m39_fg_raw_get(char *buffer, const struct kernel_param *parameter)
      * 30 ms acquisition budget; never return stale current or touch a busy
      * latch. Cleanup failures are still fatal and are never retried here. */
     while (!mutex_trylock(&m39_fg_lock)) {
-        if (m39_fg_now() >= finish)
+        if (m39_fg_now() >= finish) {
+            m39_fg_lock_timeout();
             return -EBUSY;
+        }
         m39_fg_pause();
     }
     if (m39_fg_now() >= finish) {

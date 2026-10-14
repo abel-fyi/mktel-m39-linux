@@ -22,6 +22,8 @@ struct kernel_param_ops { int (*get)(char *, const struct kernel_param *); };
 #define DEFINE_MUTEX(name) int name
 #define PAGE_SIZE 4096
 #define pr_err(...) fprintf(stderr, __VA_ARGS__)
+#define READ_ONCE(value) (value)
+#define WRITE_ONCE(value, new_value) ((value) = (new_value))
 #define scnprintf snprintf
 #define module_param_cb(name, ops, arg, mode) \
     static const struct kernel_param_ops *registered_ops = ops
@@ -61,6 +63,7 @@ static int pmic_config_interface(unsigned reg,unsigned value,unsigned mask,unsig
 int main(int argc,char **argv) {
  char buffer[4096]={0}; if(argc!=2) return 2; scenario=argv[1];
  if(!strcmp(scenario,"busy") || !strcmp(scenario,"contended") || !strcmp(scenario,"late")) m39_fg_lock=1;
+ m39_fg_vendor_cmd=5;
  int rc=registered_ops->get(buffer,0);
  printf("rc=%d writes=%u locks=%u unlocks=%u ctrl=%u ticks=%llu\n%s",rc,writes,locks,unlocks,ctrl,ticks,buffer);
  return 0;
@@ -83,6 +86,8 @@ int main(int argc,char **argv) {
                         self.assertEqual(values['locks'], '0' if scenario=='busy' else '1')
                         self.assertLessEqual(int(values['ticks']), 30000000)
                         self.assertEqual(values['unlocks'], '0' if scenario=='busy' else '1')
+                        if scenario=='busy':
+                            self.assertIn('vendor_cmd=5 held_us=30000',result.stderr)
                     else:
                         self.assertEqual(values['locks'], '1')
                         self.assertEqual(values['unlocks'], '1')
