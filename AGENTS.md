@@ -1,5 +1,9 @@
 # Working efficiently
 
+- Read `ROADMAP.md` when resuming work. It records the agreed objective, ordered
+  milestones and latest handoff. Keep it current when a milestone or blocker
+  changes; consult local `CURRENT-STATE.md` for detailed device evidence.
+
 - Preserve the user's full objective, but distinguish software work from hardware
   verification. Never claim an untested battery behavior is complete.
 - Do useful independent implementation work while bounded phone-side jobs run.

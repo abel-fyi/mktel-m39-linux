@@ -3,6 +3,9 @@
 Experimental native Linux bring-up for the MKTEL M39 keypad phone
 (MT6737M, MT6328 PMIC, 2 GB RAM, 16 GB eMMC).
 
+See [the agreed roadmap and handoff](ROADMAP.md) for current priorities,
+completion criteria and remaining hardware validation.
+
 ## License
 
 Project code and original documentation are licensed under
@@ -36,12 +39,8 @@ Screen idle control: `m39-screen on 60`, `m39-screen off`.
 
 See [battery usage and limits](BATTERY.md), [battery research](analysis/BL25BI-RESEARCH.md) and
 [charging notes](analysis/CHARGING.md). Historical notes may describe older
-images; the current verified image is
-`alpine-m39-battery-experimental-unplug.partition.img`, SHA-256:
-`401be1b2493107a5a5f8f4ed2982b8ae4c0d927150c5f02f086118f6d5e41856`.
-The prior manual-only image remains the recovery baseline. The current local
-storage-tools image additionally enables AES-XTS and bundles signed crypto/ext4
-packages. Charging under storage load and low-voltage recovery remain unresolved.
+images. Current image hashes and device evidence are kept in local artifact
+metadata and `CURRENT-STATE.md`; recovery images remain preserved.
 
 ## USB console
 
@@ -64,6 +63,6 @@ kernel/toolchain/rootfs inputs; this is not yet a self-contained installer.
 
 ## Next milestones
 
-1. Verify reboot persistence and improve shutdown/init integration.
-2. Networking/SSH, touchscreen and a lightweight GUI.
-3. Modern-kernel port and remaining battery-management features.
+Follow the ordered milestones in [ROADMAP.md](ROADMAP.md): dependable development
+baseline, limited usable battery support, useful Linux features, then complete
+battery support.
