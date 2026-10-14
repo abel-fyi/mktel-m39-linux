@@ -32,4 +32,22 @@ if 'WRITE_ONCE(m39_fg_vendor_cmd, cmd)' not in source:
     assert source.count(needle) == 1
     source = source.replace(needle, '\tWRITE_ONCE(m39_fg_vendor_cmd, -1);\n' + needle)
     path.write_text(source)
-print('Prepared serialized bounded raw gauge endpoint; no charger limits changed.')
+source = path.read_text()
+if 'mutex_lock(&m39_meter_command_lock)' not in source:
+    needle = '\tmutex_lock(&m39_fg_lock);\n\tWRITE_ONCE(m39_fg_vendor_started, m39_fg_now());\n\tWRITE_ONCE(m39_fg_vendor_cmd, cmd);'
+    assert source.count(needle) == 1
+    source = source.replace(needle, '''\tmutex_lock(&m39_meter_command_lock);
+\tif (m39_fg_needs_lock(cmd)) {
+\t\tmutex_lock(&m39_fg_lock);
+\t\tWRITE_ONCE(m39_fg_vendor_started, m39_fg_now());
+\t\tWRITE_ONCE(m39_fg_vendor_cmd, cmd);
+\t}''')
+    needle = '\tWRITE_ONCE(m39_fg_vendor_cmd, -1);\n\tmutex_unlock(&m39_fg_lock);'
+    assert source.count(needle) == 1
+    source = source.replace(needle, '''\tif (m39_fg_needs_lock(cmd)) {
+\t\tWRITE_ONCE(m39_fg_vendor_cmd, -1);
+\t\tmutex_unlock(&m39_fg_lock);
+\t}
+\tmutex_unlock(&m39_meter_command_lock);''')
+    path.write_text(source)
+print('Prepared separate vendor command serialization and gauge latch ownership.')

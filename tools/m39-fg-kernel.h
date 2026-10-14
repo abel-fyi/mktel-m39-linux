@@ -1,14 +1,30 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Included by battery_meter_hal.c. All vendor bm_ctrl_cmd transactions and
- * this diagnostic snapshot share the same mutex. No charger control writes. */
+/* Included by battery_meter_hal.c. Vendor commands remain serialized;
+ * latch users also share the raw snapshot's mutex. No charger control writes. */
 #include <linux/mutex.h>
 #include <linux/moduleparam.h>
 #include <linux/ktime.h>
 #include "m39-fg-core.h"
 
 static DEFINE_MUTEX(m39_fg_lock);
+static DEFINE_MUTEX(m39_meter_command_lock);
 static int m39_fg_vendor_cmd = -1;
 static u64 m39_fg_vendor_started;
+
+static int m39_fg_needs_lock(unsigned command)
+{
+    /* Reviewed ADC callbacks only use AUXADC, not FGADC_CON0. Everything else
+     * remains protected, including unknown commands (fail closed). */
+    switch (command) {
+    case BATTERY_METER_CMD_GET_ADC_V_BAT_SENSE:
+    case BATTERY_METER_CMD_GET_ADC_V_I_SENSE:
+    case BATTERY_METER_CMD_GET_ADC_V_BAT_TEMP:
+    case BATTERY_METER_CMD_GET_ADC_V_CHARGER:
+        return 0;
+    default:
+        return 1;
+    }
+}
 
 static void m39_fg_lock_timeout(void)
 {

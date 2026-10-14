@@ -16,6 +16,10 @@ class KernelGaugeTests(unittest.TestCase):
 #include <string.h>
 #include <errno.h>
 #define __KERNEL__
+#define BATTERY_METER_CMD_GET_ADC_V_BAT_SENSE 5
+#define BATTERY_METER_CMD_GET_ADC_V_I_SENSE 6
+#define BATTERY_METER_CMD_GET_ADC_V_BAT_TEMP 7
+#define BATTERY_METER_CMD_GET_ADC_V_CHARGER 8
 typedef unsigned long long u64;
 struct kernel_param { int unused; };
 struct kernel_param_ops { int (*get)(char *, const struct kernel_param *); };
@@ -62,10 +66,14 @@ static int pmic_config_interface(unsigned reg,unsigned value,unsigned mask,unsig
 #include "m39-fg-kernel.h"
 int main(int argc,char **argv) {
  char buffer[4096]={0}; if(argc!=2) return 2; scenario=argv[1];
+ for(unsigned command=0;command<100;command++)
+  if(m39_fg_needs_lock(command)!=(command<5 || command>8)) return 3;
+ if(m39_meter_command_lock) return 4;
+ if(!strcmp(scenario,"adc-held")) m39_meter_command_lock=1;
  if(!strcmp(scenario,"busy") || !strcmp(scenario,"contended") || !strcmp(scenario,"late")) m39_fg_lock=1;
- m39_fg_vendor_cmd=5;
+ m39_fg_vendor_cmd=1;
  int rc=registered_ops->get(buffer,0);
- printf("rc=%d writes=%u locks=%u unlocks=%u ctrl=%u ticks=%llu\n%s",rc,writes,locks,unlocks,ctrl,ticks,buffer);
+ printf("rc=%d writes=%u locks=%u unlocks=%u ctrl=%u ticks=%llu command_lock=%d\n%s",rc,writes,locks,unlocks,ctrl,ticks,m39_meter_command_lock,buffer);
  return 0;
 }
 '''
@@ -74,12 +82,13 @@ int main(int argc,char **argv) {
                             '-Wno-misleading-indentation', '-I'+str(p),
                             '-I'+str(Path(__file__).parent), str(p/'test.c'),
                             '-o', str(p/'test')], check=True)
-            for scenario in ['valid', 'contended', 'busy', 'late', 'read-error', 'release-error']:
+            for scenario in ['valid', 'adc-held', 'contended', 'busy', 'late', 'read-error', 'release-error']:
                 with self.subTest(scenario=scenario):
                     result = subprocess.run([str(p/'test'), scenario], capture_output=True,
                                             text=True, check=True)
                     lines=result.stdout.splitlines()
                     values=dict(item.split('=') for item in lines[0].split())
+                    self.assertEqual(values['command_lock'], '1' if scenario=='adc-held' else '0')
                     if scenario in ['busy','late']:
                         self.assertEqual(values['rc'], str(-16))
                         self.assertEqual(values['writes'], '0')
@@ -87,11 +96,11 @@ int main(int argc,char **argv) {
                         self.assertLessEqual(int(values['ticks']), 30000000)
                         self.assertEqual(values['unlocks'], '0' if scenario=='busy' else '1')
                         if scenario=='busy':
-                            self.assertIn('vendor_cmd=5 held_us=30000',result.stderr)
+                            self.assertIn('vendor_cmd=1 held_us=30000',result.stderr)
                     else:
                         self.assertEqual(values['locks'], '1')
                         self.assertEqual(values['unlocks'], '1')
-                        if scenario in ['valid','contended']:
+                        if scenario in ['valid','adc-held','contended']:
                             self.assertEqual(lines[1], '64833 -702')
                             self.assertEqual(values['ctrl'], '41')
                         else:
