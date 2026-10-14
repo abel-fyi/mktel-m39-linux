@@ -31,8 +31,11 @@ this milestone does not establish suitability for unattended charging.
 
 - [ ] Charging starts without manual arming while locked and after root unlock.
       Handoff leaves exactly one controller and preserves fault/manual-stop state.
-- [ ] Three consecutive unplug/reconnect cycles on one boot pass: phone stays
+- [x] Three consecutive unplug/reconnect cycles on one boot pass: phone stays
       running unplugged, detach is handled cleanly, reconnect starts valid charging.
+      Passed on kernel #19, boot `f03dc355-8f66-4aa8-8ed1-f3c074428677`,
+      same broker2040; controllers5699/8603/11225 after reconnect. Evidence:
+      local `logs/serialized-gauge-three-reconnects.txt`; no kernel gauge errors logged.
 - [ ] Repeat automatic startup after two fresh boots; screen idle/wake and normal
       storage activity do not break charging or cause unexplained shutdowns.
 - [ ] Verify sustained net charging and useful unplugged operation, rather than
