@@ -266,7 +266,7 @@ cleanup() {
             if [ "$#" -eq 5 ]; then
                 if [ "$3" -lt 1000 ]; then
                     case "${stop_reason:-unknown}" in
-                        stop_requested|charger_stopped|input_voltage_changed)
+                        stop_requested|charger_stopped|input_voltage_changed|regulation_disabled)
                             stop_reason=unplugged
                             test_exit=0
                             ;;
@@ -379,7 +379,7 @@ while [ "$count" -lt "$intervals" ]; do
         [ "$(( $(readreg 0f48) & 24 ))" -eq 24 ] || { stop_reason=charger_stopped; fail 'Charger stopped before sampling'; }
         [ "$(( $(readreg 0f66) & 4 ))" -eq 0 ] || fail 'Watchdog expired before sampling'
         [ "$(( $(readreg 0f62) & 31 ))" -eq 16 ] || fail 'Four-second watchdog profile changed'
-        [ "$(( $(readreg 0f4c) & 10 ))" -eq 10 ] || fail 'Voltage/current regulation disabled before sampling'
+        [ "$(( $(readreg 0f4c) & 10 ))" -eq 10 ] || { stop_reason=regulation_disabled; fail 'Voltage/current regulation disabled before sampling'; }
         [ "$(( $(readreg 0f4e) & 31 ))" -eq "$cv_code" ] || fail 'CV limit changed before sampling'
         [ "$(( $(readreg 0f50) & 15 ))" -eq "$current_code" ] || fail 'Current limit changed before sampling'
         [ "$(( $(readreg 0f7a) & 70 ))" -eq 68 ] || fail 'Voltage-control mode changed before sampling'

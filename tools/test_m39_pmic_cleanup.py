@@ -66,6 +66,16 @@ saved_f66=0
         self.assertEqual(state['phase'], 'aborted')
         self.assertEqual(state['stop_reason'], 'charger_stopped')
 
+    def test_regulation_stop_requires_confirmed_unplug(self):
+        for vbus, expected in [(728,'stopped'),(5100,'aborted')]:
+            _, _, state = self.run_cleanup(source=True,vbus=vbus,exit_code=1,reason='regulation_disabled')
+            self.assertEqual(state['phase'],expected)
+            self.assertEqual(state['stop_reason'],'unplugged' if vbus<1000 else 'regulation_disabled')
+        _, _, state = self.run_cleanup(source=True,sample_failure=True,exit_code=1,reason='regulation_disabled')
+        self.assertEqual(state['phase'],'off_restore_failed')
+        _, _, state = self.run_cleanup(source=True,fail_off=True,vbus=728,exit_code=1,reason='regulation_disabled')
+        self.assertFalse(state['charging_off_verified'])
+
     def test_unplug_does_not_hide_unrelated_fault(self):
         _, _, state = self.run_cleanup(source=True, vbus=113, exit_code=1, reason='fault')
         self.assertEqual(state['phase'], 'aborted')
