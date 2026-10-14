@@ -44,62 +44,21 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
-The charging-off probe on kernel #21 failed after one successful sample. Its
-timeout trace recorded vendor command5 (battery-voltage AUXADC), with current
-holder ages153/1711 microseconds: contention, not proof of one continuous long
-hold. Source review confirms the four ADC callbacks do not access the gauge
-latch. A tested candidate keeps vendor dispatch serialized separately and uses
-the gauge mutex for all other commands (including unknown commands). Acquisition
-deadlines and fault handling are unchanged. Kernel build and seven adapter
-scenarios passed; kernel #22 is installed with full readback verification.
-Root/home unlocked and persistence markers survived. The new 180-second probe
-is running with charging OFF; check its outcome after completion, not idle polls. Evidence:
-local `logs/gauge-lock-holder-probe-result.txt`.
+Kernel #22 is installed with full boot readback verification. Its charging-off
+probe completed1599 snapshots over180 seconds without logged gauge errors.
+Kernel #21 failed after one snapshot; its trace identified command5 (battery
+voltage AUXADC) contending for an unnecessarily shared lock. The fix preserves
+vendor command serialization and protects all gauge/unknown commands with the
+latch mutex, while four reviewed AUXADC callbacks use only the dispatch mutex.
+Acquisition deadlines, watchdog, voltage/current limits and fault shutdown are
+unchanged. Evidence: local `logs/gauge-lock-scope-probe-result.txt`.
 
-Kernel #21 is installed and verified, with a diagnostic record identifying the
-vendor command and hold duration at lock timeout. Encrypted root/home survived
-and unlocked automatically. Charging is OFF. A maximum180-second raw gauge
-probe is running; it stops on its first read failure. Inspect its outcome after
-completion (`/run/m39-fg-lock-probe.json` and `.log`), not through idle polling.
-The timeout's suspected cause is the shared lock also covering slow ADC commands;
-confirm the holder before changing lock scope.
-
-Latest check: kernel #20's run **failed** at uptime215 with `Resource busy`
-from the gauge endpoint, despite the bounded lock wait. Charging OFF was
-verified; no restart performed. The next investigation is which vendor gauge
-command holds the shared lock beyond the deadline. Prior deployment observations
-below remain valid, but the reliability run is no longer active. Evidence:
-local `logs/gauge-bounded-lock-progress.txt`.
-
-Kernel #19's serialized gauge endpoint is installed and boot-tested; the full
-boot-partition readback matched. Root/home unlock and automatic charging handoff
-passed. Three physical unplug/reconnect cycles on the same broker passed with
-no logged kernel gauge errors. Longer-run reliability remains unproven. The subsequent run stopped on a genuine
-vendor-lock collision (`Resource busy`), with charging OFF verified. A revised
-candidate now waits for the shared lock inside the original 30 ms acquisition
-budget; lock timeout and measurement/cleanup failures remain fatal. Six adapter
-scenarios, shared-core tests and kernel compilation passed. Kernel #20 is now
-installed with full readback verification; boot/root handoff passed and positive
-charging was observed at uptime83 (3514 mV, raw current+224). The bounded
-reliability run subsequently failed; charging is stopped. Do not poll it until a fault,
-reported completion, or the first segment milestone (~30 minutes).
-
-Controlled `m39-poweroff` shut down on battery, confirmed by the user. USB
-insertion without power presses produced a fresh boot and the locked prompt.
-Automatic charging preparation began, but the user then left to eat, so charging
-was stopped before sustained positive-current validation. Cold-off charging is
-therefore only partially validated, not complete.
-
-Current boot `6ff52c18-e2f3-442e-ae51-c4661b4da2f4` is unlocked automatically.
-Root/home persistence markers survived; temporary key removed. Broker1964 and
-controller2462 are stopped after a fault; screen idle is enabled after30 seconds. Public
-status now reports fresh idle broker measurements with process/freshness checks.
-Evidence: local `logs/gauge-bounded-lock-root-verified.txt` and
-`logs/gauge-bounded-lock-boot-readback.txt`.
-
-Next: inspect the longer bounded gauge run at the first segment milestone or
-reported fault, then validate USB-attached shutdown/startup and cutoff/recharge.
-Do not raise charge limits. No idle agent polling while charging.
+Current boot `59baaba0-14b9-400e-9183-ffe829fd3af9` is unlocked; root/home
+persistence markers survived and the temporary key was removed. Charging-off
+sampling passes, but longer charging reliability still needs verification.
+A fresh bounded charging broker has been explicitly launched; the user monitors
+its first segment (~30 minutes). Check on completion/fault, not idle agent polls.
+Next: validate that segment, then USB-attached shutdown/startup and cutoff/recharge.
 
 ## Working agreement
 

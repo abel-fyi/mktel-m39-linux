@@ -127,9 +127,11 @@ Local `CURRENT-STATE.md` and logs hold the latest device state and detailed evid
 
 ## Installed automatic startup
 
-Boot-partition SHA-256: `fd2808b7fb58c1cc4bba2bcdaf8299b1585e3561abd9e80e1f01d9d90496bb29`.
-Current kernel #20 uses a serialized raw gauge endpoint, with bounded lock waiting
-inside the original acquisition deadline. Longer-run reliability remains under test.
+Boot-partition SHA-256: `73d8e0ce2418724fbbb3d16f450ef7212aa25262bb0ebe34eef6704e6dbec50f`.
+Kernel #22 separates vendor command serialization from gauge-latch locking.
+A charging-off180-second probe passed1599 snapshots with no logged gauge errors;
+longer charging reliability remains under test. Deadlines and fault shutdown
+are unchanged.
 Full readback matched. A software reboot started charging while root/home were
 locked; USB development unlock then restarted the broker on encrypted root. Both
 filesystem persistence markers survived and the temporary runtime key was removed.
