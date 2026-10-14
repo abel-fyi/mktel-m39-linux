@@ -14,6 +14,7 @@ flags = ['-std=gnu99', '-Os', '-Wall', '-Wextra', '-Werror', '-ffreestanding',
 subprocess.run([str(compiler), *flags, '-o', str(output), str(source)], check=True)
 metadata = {
     'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+    'core_sha256': hashlib.sha256((root / 'tools/m39-fg-core.h').read_bytes()).hexdigest(),
     'binary_sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
     'compiler': str(compiler.relative_to(root)), 'flags': flags,
     'charger_control_writes': False, 'kernel_or_storage_writes': False,

@@ -1,92 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
-/* Bounded MT6328 current snapshot. No charger controls, counter resets or
- * calibration writes. Kernel users share the gauge: no exclusive lock is
- * claimed. Reject a lost latch, release it, and retry within 30 ms. */
-typedef unsigned long long u64;
-struct io {
-    int (*read)(unsigned, unsigned *);
-    int (*write_control)(unsigned);
-    u64 (*now)(void);
-    void (*pause)(void);
-};
-struct result { unsigned raw, attempts, stage, release_stage, release_control; };
-
-static int release(const struct io *p, u64 deadline, struct result *out) {
-    unsigned control;
-    out->release_stage=1;
-    if (p->read(0xca4, &control)) return -1;
-    out->release_control=control;
-    out->release_stage=2;
-    if (p->write_control((control & 255) | 0x800)) return -1;
-    do {
-        out->release_stage=3;
-        if (p->read(0xca4, &control)) return -1;
-        out->release_control=control;
-        if (!(control & 0x400)) {
-            out->release_stage=4;
-            if (p->write_control(control & 255)) return -1;
-            out->release_stage=0;
-            return 0;
-        }
-        p->pause();
-    } while (p->now() < deadline);
-    out->release_stage=5;
-    return -1;
-}
-
-/* Every acquired request is released before success or retry. A failed
- * release is fatal, never treated as a valid or merely stale measurement. */
-static int snapshot(const struct io *p, struct result *out) {
-    unsigned identity, control, raw;
-    u64 finish = p->now() + 30000000ULL;
-    out->stage=1;
-    if (p->read(0x200, &identity)) return -1;
-    out->stage=2;
-    if ((identity >> 8) != 0x28) return -1;
-    for (unsigned attempt = 1; attempt <= 3; attempt++) {
-        out->attempts=attempt;
-        do {
-            out->stage=3;
-            if (p->read(0xca4, &control)) return -1;
-            if (!(control & 0xff00)) break;
-            out->stage=4;
-            if (p->now() >= finish) return -1;
-            p->pause();
-        } while (1);
-        out->stage=9;
-        if (p->now() >= finish) return -1;
-        if (p->write_control((control & 255) | 0x200)) {
-            out->stage=release(p, p->now() + 5000000ULL, out)?10:5;
-            return -1;
-        }
-        int complete = 0, io_failed = 0;
-        u64 ready_deadline = p->now() + 5000000ULL;
-        do {
-            out->stage=6;
-            if (p->read(0xca4, &control)) { io_failed = 1; break; }
-            if (control & 0x400) {
-                out->stage=7;
-                if (p->read(0xcb2, &raw) || p->read(0xca4, &control)) {
-                    io_failed = 1;
-                } else {
-                    complete = !!(control & 0x400);
-                }
-                break;
-            }
-            p->pause();
-        } while (p->now() < ready_deadline && p->now() < finish);
-        if (release(p, p->now() + 5000000ULL, out)) { out->stage=10; return -1; }
-        if (io_failed) return -1;
-        if (complete && p->now() < finish) {
-            out->raw = raw;
-            out->attempts = attempt;
-            out->stage=0;
-            return 0;
-        }
-        out->stage=complete?9:8;
-    }
-    return -1;
-}
+#include "m39-fg-core.h"
 
 #ifdef M39_FG_HOST_TEST
 #include <stdio.h>
@@ -126,9 +38,9 @@ int main(int argc, char **argv) {
     if (argc != 2) return 2;
     scenario = argv[1];
     if (!strcmp(scenario, "busy")) ctrl |= 0x600;
-    struct io p = {read_reg, write_control, now, pause_io};
-    struct result r = {0};
-    int rc = snapshot(&p, &r);
+    struct m39_fg_io p = {read_reg, write_control, now, pause_io};
+    struct m39_fg_result r = {0};
+    int rc = m39_fg_snapshot(&p, &r);
     printf("rc=%d raw=%u requests=%u clears=%u low_changes=%u ctrl=%u ticks=%llu failed_reads=%u stage=%u release_stage=%u release_control=%u\n",
            rc, r.raw, requests, clears, changes, ctrl, ticks, failed_reads,r.stage,r.release_stage,r.release_control);
     return 0;
@@ -194,9 +106,9 @@ static unsigned decimal(char *buffer, unsigned value) {
     return n;
 }
 void _start(void) {
-    static const struct io p = {read_reg,write_control,now,pause_io};
-    struct result r={0};
-    int rc=snapshot(&p,&r);
+    static const struct m39_fg_io p = {read_reg,write_control,now,pause_io};
+    struct m39_fg_result r={0};
+    int rc=m39_fg_snapshot(&p,&r);
     if (!rc) {
         char output[32]; unsigned n=decimal(output,r.raw); output[n++]=' ';
         if (r.raw>32767) {output[n++]='-'; n+=decimal(output+n,65535-r.raw);}

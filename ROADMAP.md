@@ -44,16 +44,27 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
-The latest observed controller aborted with `FG_ERROR stage=10`: fuel-gauge
-measurement-latch release failed. Charging shutdown was verified. More detailed
-release diagnostics were installed in encrypted root, with seven host tests and
-a charging-off hardware sample passing. The boot image still has the earlier
-helper. A bounded diagnostic run was launched, but its outcome is not yet known.
+Current session: boot `24158b89-ab33-4286-aea7-466cbbd3fa87` unlocked remotely;
+encrypted root/home mounted. Automatic charging passed through root handoff,
+then was explicitly stopped while the user went away; charging OFF verified.
 
-The user subsequently disconnected to leave. Do not assume any controller or
-charging session remains active. On resumption, inspect the actual connection,
-boot identity and process state before mutations. Diagnose the latch failure
-and shutdown behavior next; do not raise charging limits.
+Vendor gauge transactions lack a lock shared with our userspace helper.
+Contention is a plausible cause of the earlier release failure, not yet proven.
+A candidate kernel serializes vendor transactions and a new bounded raw-current
+endpoint. The same fault-tested acquisition core is reused; supported kernels
+never fall back after endpoint read failure. Kernel compilation, adapter/backend
+tests and encrypted image verification passed. Candidate
+`alpine-m39-encrypted-serialized-gauge.partition.img` is **not flashed or boot-tested**.
+Previous installed image remains intact. Updated root helper is installed.
+
+`m39-poweroff` and a `poweroff` alias are installed in root. They stop charging,
+verify OFF, sync and remount storage read-only, then request kernel poweroff
+directly (custom PID 1 has no BusyBox shutdown handler). Ordering/failure tests
+passed; actual poweroff behavior still needs hardware verification.
+
+Next: when the user returns, verify current state, deploy/readback-test the
+candidate boot, unlock automatically, validate the kernel endpoint and repeat
+charging. Then test controlled shutdown on battery. Do not raise charge limits.
 
 ## Working agreement
 

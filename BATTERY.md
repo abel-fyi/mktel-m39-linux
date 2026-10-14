@@ -51,10 +51,16 @@ m39-charge status
 m39-battery-status
 m39-charge stop
 m39-charge arm
+m39-poweroff
 m39-screen on 30
 m39-screen off
 cat /run/m39-broker.json /run/m39-charge-status.json
 ```
+
+`m39-poweroff` is the new controlled shutdown path for the custom init: stop
+charging, verify OFF, sync/remount persistent storage read-only, then invoke
+kernel poweroff. Software refusal/ordering tests passed; hardware shutdown
+validation is pending. USB attachment may cause charging-mode reboot.
 
 `stop` also cancels pending startup and the explicit broker for this boot. `arm`
 explicitly validates and rearms the legacy bounded service. The broker is launched

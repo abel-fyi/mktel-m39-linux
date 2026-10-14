@@ -172,6 +172,13 @@ sample() (
     echo "$(( ($1 & 32767) * 5400 / 32768 )) $(( ($2 & 32767) * 5400 / 32768 )) $(( ($3 & 4095) * 1800 / 4096 * 369 / 39 )) $(( ($5 & 4095) * 1800 / 4096 )) $(( ($4 & 4095) * 1800 / 4096 ))"
 )
 fuel_current() (
+    kernel_gauge=/sys/module/battery_meter_hal/parameters/m39_fg_raw
+    if [ -e "$kernel_gauge" ]; then
+        # Shared kernel mutex excludes vendor gauge users for the complete
+        # transaction. A failed kernel read stays fatal; never fall back to
+        # the uncoordinated debug-register reader on a supported kernel.
+        exec cat "$kernel_gauge"
+    fi
     [ -x /run/m39-fg-sample ] || fail 'Native fuel-gauge helper missing'
     # Fast, bounded transaction; never falls back to the contended shell
     # reader or treats a failed/stale acquisition as a valid current sample.
