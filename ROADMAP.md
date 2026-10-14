@@ -51,7 +51,11 @@ no logged kernel gauge errors. Longer-run reliability remains unproven. The subs
 vendor-lock collision (`Resource busy`), with charging OFF verified. A revised
 candidate now waits for the shared lock inside the original 30 ms acquisition
 budget; lock timeout and measurement/cleanup failures remain fatal. Six adapter
-scenarios, shared-core tests and kernel compilation passed; deployment is underway.
+scenarios, shared-core tests and kernel compilation passed. Kernel #20 is now
+installed with full readback verification; boot/root handoff passed and positive
+charging was observed at uptime83 (3514 mV, raw current+224). The bounded
+reliability run is active; the user monitors. Do not poll it until a fault,
+reported completion, or the first segment milestone (~30 minutes).
 
 Controlled `m39-poweroff` shut down on battery, confirmed by the user. USB
 insertion without power presses produced a fresh boot and the locked prompt.
@@ -59,15 +63,16 @@ Automatic charging preparation began, but the user then left to eat, so charging
 was stopped before sustained positive-current validation. Cold-off charging is
 therefore only partially validated, not complete.
 
-Current boot `24814e69-6983-4b75-88d4-88b278521ee4` is unlocked automatically.
-Root/home persistence markers survived; temporary key removed; manual stop
-preserved and owner zero. Keep charging stopped while the user is away.
-Evidence: local `logs/after-poweroff-persistence.txt`,
-`logs/cold-off-charge-and-stop.txt`, `logs/serialized-gauge-three-reconnects.txt`.
+Current boot `6ff52c18-e2f3-442e-ae51-c4661b4da2f4` is unlocked automatically.
+Root/home persistence markers survived; temporary key removed. Broker1964 and
+controller2462 are charging; screen idle is enabled after30 seconds. Public
+status now reports fresh idle broker measurements with process/freshness checks.
+Evidence: local `logs/gauge-bounded-lock-root-verified.txt` and
+`logs/gauge-bounded-lock-boot-readback.txt`.
 
-Next: when the user returns, explicitly revalidate charging, perform a longer
-bounded gauge reliability run while doing independent implementation, then test
-USB-attached shutdown/startup and cutoff/recharge. Do not raise charge limits.
+Next: inspect the longer bounded gauge run at the first segment milestone or
+reported fault, then validate USB-attached shutdown/startup and cutoff/recharge.
+Do not raise charge limits. No idle agent polling while charging.
 
 ## Working agreement
 

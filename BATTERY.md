@@ -127,7 +127,9 @@ Local `CURRENT-STATE.md` and logs hold the latest device state and detailed evid
 
 ## Installed automatic startup
 
-Boot-partition SHA-256: `521cc166b1e1945e78b18b9cf1727b88dc2aed86a1dbfea0cbb1b966b4e6e967`.
+Boot-partition SHA-256: `fd2808b7fb58c1cc4bba2bcdaf8299b1585e3561abd9e80e1f01d9d90496bb29`.
+Current kernel #20 uses a serialized raw gauge endpoint, with bounded lock waiting
+inside the original acquisition deadline. Longer-run reliability remains under test.
 Full readback matched. A software reboot started charging while root/home were
 locked; USB development unlock then restarted the broker on encrypted root. Both
 filesystem persistence markers survived and the temporary runtime key was removed.
