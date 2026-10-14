@@ -18,6 +18,9 @@ voltage=null
 current=null
 age=null
 reason=no_current_record
+canonical_unsigned() {
+ case "$1" in ''|*[!0-9]*|0[0-9]*) return 1;; *) return 0;; esac
+}
 if [ -r "$runtime/m39-charge-status.json" ]; then
  cp "$runtime/m39-charge-status.json" "$snapshot"
  if [ "$(field boot_id)" = "$boot" ]; then
@@ -28,7 +31,8 @@ if [ -r "$runtime/m39-charge-status.json" ]; then
   fg=$(field fg_signed_raw)
   case "$stamp:$mv:$pid" in *[!0-9:]*|:*|*::*) reason=invalid_record;;
   *)
-   if [ -n "$stamp" ] && [ -n "$mv" ] && [ -n "$pid" ] && [ "$now" -ge "$stamp" ]; then
+   if canonical_unsigned "$stamp" && canonical_unsigned "$mv" &&
+      canonical_unsigned "$pid" && [ "$now" -ge "$stamp" ]; then
     age=$((now-stamp))
     reason=$(field stop_reason)
     # Completed OFF verification is a historical fact, not a full-battery claim.
@@ -38,7 +42,7 @@ if [ -r "$runtime/m39-charge-status.json" ]; then
     if [ "$age" -le 3 ] && [ "$mv" -ge 2700 ] && [ "$mv" -le 4300 ]; then
      voltage=$mv
      case "$fg" in -*) digits=${fg#-};; *) digits=$fg;; esac
-     case "$digits" in ''|*[!0-9]*) ;; *) current=$fg;; esac
+     if canonical_unsigned "$digits"; then current=$fg; fi
      if [ "$phase" = charging ] && [ -r "$proc_root/$pid/stat" ] &&
         tr '\000' ' ' < "$proc_root/$pid/cmdline" | grep -Fq m39-pmic-pulse.sh &&
         [ "$(field charging_off_verified)" = false ] && [ "$current" != null ]; then

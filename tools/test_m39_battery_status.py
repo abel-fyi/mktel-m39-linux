@@ -8,7 +8,7 @@ with tempfile.TemporaryDirectory() as d:
  (p/'proc/123/cmdline').write_bytes(b'/bin/sh\0/run/m39-pmic-pulse.sh\0')
  env=dict(os.environ,M39_STATUS_RUNTIME=d,M39_STATUS_BOOT=str(p/'boot'),M39_STATUS_UPTIME=str(p/'uptime'),M39_STATUS_PROC=str(p/'proc'))
  base=dict(phase='charging',pid=123,boot_id='boot-a',uptime_seconds=99,battery_mv=3600,fg_signed_raw=450,charging_off_verified=False,stop_reason='running')
- cases=[({},'charging'),({'uptime_seconds':90},'unknown'),({'boot_id':'other'},'unknown'),({'fg_signed_raw':-20},'unknown'),({'battery_mv':5000},'unknown'),({'phase':'preparing'},'unknown'),({'fg_signed_raw':'1-2'},'unknown')]
+ cases=[({},'charging'),({'uptime_seconds':90},'unknown'),({'boot_id':'other'},'unknown'),({'fg_signed_raw':-20},'unknown'),({'battery_mv':5000},'unknown'),({'phase':'preparing'},'unknown'),({'fg_signed_raw':'1-2'},'unknown'),({'battery_mv':'03600'},'unknown'),({'uptime_seconds':'099'},'unknown'),({'pid':'0123'},'unknown'),({'fg_signed_raw':'0450'},'unknown')]
  for changes,expected in cases:
   (p/'m39-charge-status.json').write_text(json.dumps(base|changes))
   value=json.loads(subprocess.check_output(['sh',str(script)],env=env))
