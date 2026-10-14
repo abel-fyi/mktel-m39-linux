@@ -147,3 +147,11 @@ is verified for this board. Thus raw counts cannot yet define a termination-curr
 threshold. Next validate the 3.9 V cutoff against an independent meter, characterize
 CV/taper and current calibration, then implement and test full-charge termination.
 The existing higher-level completion callback deliberately reports unsupported.
+
+## Charging with the display idle
+
+The verified `m39-screen on 30` keypad-wake timer reduced backlight load during
+charging. On the same boot/controller, signed fuel-gauge counts rose from +216
+with the backlight lit to +485 with brightness 0; battery ADC reported 3.624 V.
+This is a comparison of uncalibrated counts, not measured amperage. CPU suspend
+was not enabled, and current/voltage/watchdog limits were unchanged.
