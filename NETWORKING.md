@@ -1,7 +1,8 @@
 # Networking bring-up
 
-Read-only survey,2026-10-14. Wi-Fi is **not working yet**; no radio was powered
-on during this investigation. The bounded charging validation continues separately.
+Bring-up,2026-10-14. Native WMT initialization and recovered firmware loading
+now create `wlan0`. Association, DHCP and connectivity are not yet verified.
+The bounded charging validation continues separately.
 
 ## Findings
 
@@ -15,7 +16,8 @@ on during this investigation. The bounded charging validation continues separate
 - The preserved vendor backup contains `WIFI_RAM_CODE_6735`, two ROM connectivity
   patches, `WMT_SOC.cfg`, `wmt_loader` and `wmt_launcher`. These six files were
   recovered and hashed locally in `artifacts/network-recovered/manifest.json`.
-  No recovered firmware or executable was installed on the phone.
+  Reviewed firmware is now staged in `/etc/firmware`; Android executables were
+  not installed. `/system/etc/firmware` links to that directory for WMT.
 - These files come from the pre-recovery ROM, which is not verified factory
   firmware. Do not assume board calibration, compatibility or redistribution rights.
 
@@ -44,11 +46,46 @@ sequence; an enabled kernel config alone does not create a working interface.
    explicit initialization separate from read-only querying.
 2. Stage only reviewed firmware/configuration, preserving backup provenance and
    private calibration data. Keep proprietary binaries out of Git.
-3. After the charging baseline holds, initialize transport, verify interface and
-   firmware loading, then install signed Alpine networking packages and test Wi-Fi.
+3. Install signed Alpine networking packages and test Wi-Fi. Radio bring-up is
+   explicitly authorized by the current Wi-Fi goal; battery guards remain active.
 4. Establish SSH using public-key authentication; keep private keys off firmware
    and out of commits. USB networking is an alternative to investigate separately.
 
 Build the query with the existing AOSP ARM64 compiler using `-Os -ffreestanding
 -fno-builtin -fno-stack-protector -nostdlib -static -Wl,-e,_start`. It was compiled
 with warnings treated as errors and its two queries verified on the phone.
+
+## Native tools
+
+OpenMTTools upstream revision `ef35f769d211a2942a6783410b58bd824dd363f9`
+([source](https://gitlab.com/Dahrkael/openmttools)) already maps `0x0335` to
+the `0x6735` initialization family. Its MIT license remains applicable.
+`tools/openmttools-m39.patch` supplies full patch paths required by this vendor
+kernel and rejects failed patch metadata reads/ioctls. `tools/build-openmttools.sh`
+builds static ARM64 musl executables using the local pinned APK inputs.
+
+Verified sequence: `mtinit -safe`, then `mtdaemon -m 3 -p /etc/firmware`,
+then `echo 1 > /dev/wmtWifi`. Kernel logs confirm both ROM patches downloaded,
+hardware/firmware version `0x8a00`, and successful WLAN probe. Do not replay
+initialization while an existing daemon or incomplete operation is running.
+Firmware remains local and excluded from Git; redistribution rights are unknown.
+
+Signed Alpine `iw`, `wpa_supplicant`, dependencies and `tcpdump` are installed.
+Both nl80211 and wext associate, receive handshake message1 and send message2,
+but authentication has not completed. DHCP has not obtained a lease. A bounded
+EAPOL capture confirms packets in both directions; it does not prove successful
+over-the-air delivery of outgoing frames. The user reported hotspot auto-off;
+with it staying enabled, authentication still fails. Test WPA2-only next.
+
+The backup nvdata filesystem retained `/APCFG/APRDEB/WIFI` (514 bytes) and
+`WIFI_CUSTOM` (6 bytes). These were restored privately to the driver's
+`/data/nvram/APCFG/APRDEB/` paths, inside encrypted root. The missing-file
+warning `0x01` changed to `0x10` (invalid/default MAC per this kernel).
+This is recovered configuration, not verified factory calibration; neither files
+nor packet captures belong in Git. Credentials are root-only and excluded from
+firmware. No automatic Wi-Fi boot hook is enabled until connection is verified.
+
+The build script expects an existing pinned upstream checkout with the included
+patch applied, the existing AOSP GCC4.9 toolchain, and a musl sysroot extracted
+from the two APKs in `tools/openmttools-build-inputs.json`. It verifies input
+hashes and the checkout patch before building; it does not download dependencies.

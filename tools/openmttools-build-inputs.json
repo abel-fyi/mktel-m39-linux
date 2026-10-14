@@ -1,0 +1,4 @@
+[
+  {"package":"musl","version":"1.2.5-r23","path":"artifacts/network-packages/musl-1.2.5-r23.apk","sha256":"6a3edd924ead1fad88a69e28c5775809af3026b322f58428001cd02fedc5299e"},
+  {"package":"musl-dev","version":"1.2.5-r23","path":"artifacts/network-packages/musl-dev-1.2.5-r23.apk","sha256":"19032a762b8c6967d3789de1bf540754a0121e517402022eebd3ae6f1c9965a4"}
+]

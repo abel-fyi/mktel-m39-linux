@@ -1,0 +1,58 @@
+diff --git a/mtdaemon.c b/mtdaemon.c
+index 5629c73..479a967 100644
+--- a/mtdaemon.c
++++ b/mtdaemon.c
+@@ -288,32 +288,43 @@ int search_patch_callback()
+             /* FIXME is it required to match both major and minor versions? */
+             if ( ( chipFWMajor == fileFWMajor ) && ( chipFWMinor == fileFWMinor ) )
+             {
+-                WMT_PATCH_INFO patchInfo;
+-                if ( read( patchFD, patchInfo.address, sizeof( patchInfo.address ) ) < sizeof( patchInfo.address ) )
++                WMT_PATCH_INFO patchInfo = {0};
++                if ( read( patchFD, patchInfo.address, sizeof( patchInfo.address ) ) != sizeof( patchInfo.address ) )
+                 {
+-                    // error
++                    close(patchFD); closedir(folder); return -3;
+                 }
+ 
+                 /* tell the driver how many patches there are, then push them one by one */
+                 if ( !patchNumberSet )
+                 {    
+                     totalPatches = ( patchInfo.address[ 0 ] & 0xF0 ) >> 4;
+-                    ioctl( wmtFD, WMT_IOCTL_SET_PATCH_NUM, totalPatches );
++                    if (!totalPatches || ioctl(wmtFD, WMT_IOCTL_SET_PATCH_NUM, totalPatches) < 0) {
++                        close(patchFD); closedir(folder); return -3;
++                    }
+                     LOG_INFO( "total number of patches: %u", totalPatches );
+                     patchNumberSet = 1;
+                 }
+ 
++                if (((patchInfo.address[0] & 0xF0) >> 4) != totalPatches) {
++                    close(patchFD); closedir(folder); return -3;
++                }
+                 patchInfo.downloadSeq = patchInfo.address[ 0 ] & 0x0F;
++                if (!patchInfo.downloadSeq || patchInfo.downloadSeq > totalPatches) {
++                    close(patchFD); closedir(folder); return -3;
++                }
+                 LOG_INFO( "patch file sequence: %u/%u", patchInfo.downloadSeq, totalPatches );
+ 
+                 patchInfo.address[ 0 ] = 0x00; /* remove sequence data */
+ 
+-                /* 
+-                    FIXME on Android the full path is copied, but Linux needs the relative path
+-                    from its defined firmware folder. So is it fine this way?
+-                 */
+-                strncpy( patchInfo.patchName, entry->d_name, sizeof( patchInfo.patchName ) );
+-                ioctl( wmtFD, WMT_IOCTL_SET_PATCH_INFO, &patchInfo );
++                /* M39 vendor kernel opens the complete path with filp_open. */
++                if (strlen(filePath) >= sizeof(patchInfo.patchName)) {
++                    close(patchFD); closedir(folder); return -3;
++                }
++                memset(patchInfo.patchName, 0, sizeof(patchInfo.patchName));
++                strcpy(patchInfo.patchName, filePath);
++                if (ioctl(wmtFD, WMT_IOCTL_SET_PATCH_INFO, &patchInfo) < 0) {
++                    close(patchFD); closedir(folder); return -3;
++                }
+                 setPatches++;
+             }
+ 
