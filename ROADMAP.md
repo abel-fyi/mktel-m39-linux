@@ -44,6 +44,25 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
+Latest run: kernel #22 controller7736 aborted at uptime815 on the original
+release timeout (`stage10`, `release_stage5`, control0xc29). Charging OFF was
+verified. A later read found control0x29 (idle). ADC lock contention was fixed,
+but this release failure remains unresolved. Evidence:
+local `logs/voltage-check-and-fault.txt` and `logs/voltage-reference-shutdown-launch.txt`.
+
+Settled charging-off ADC voltage was3480mV. A45-second delayed shutdown
+(PID23445) was launched; user asked to unplug, wait1 minute, remove the battery
+and measure+/- on20V DC, then leave disconnected. Await that reading; do not
+replay the shutdown job. Exact simultaneous loaded-voltage calibration is not
+possible from a removed-pack reading; treat it as a sanity comparison.
+
+A candidate allows release confirmation to use the remaining original30ms
+acquisition budget instead of its separate5ms sub-window. Nine core fault tests
+passed, including simulated6ms scheduling delay and rejection after the total
+deadline. Kernel compiled and `alpine-m39-gauge-release-budget-encrypted` image
+packaged/verified; NOT installed. Guards still require actual release confirmation
+and valid timing; cleanup/read failures stay fatal. Hardware validation pending.
+
 Observation-only low-battery monitor is implemented, tested and installed in
 root; PID5024 reports externally powered. It uses existing fresh status, counts
 three distinct low readings, resets on stale data/USB input, and cannot call
