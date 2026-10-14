@@ -12,6 +12,17 @@ write_owner() (
     printf '%s\n' "$1" > "$command_file" || exit 1
     cat "$command_file" > "$owner"
 )
+owner_diagnostics() (
+    # Read-only evidence for a rejected lease; never relax kernel guards.
+    request=/run/m39-owner-read.$$
+    trap 'rm -f "$request"' EXIT
+    for reg in 0200 0f48 0f4e 0f50 0f54; do
+        printf '%s\n' "$reg" > "$request"
+        cat "$request" > /sys/devices/platform/mt-pmic/pmic_access || return 1
+        printf '%s=' "$reg"
+        cat /sys/devices/platform/mt-pmic/pmic_access || return 1
+    done
+)
 case "${1:-status}" in
 status)
     echo 'Policy: supervised; <=300mA nominal, 3.9V ceiling, <=1770s per connection.'
@@ -41,7 +52,11 @@ arm)
     # Ownership being zero does not prove the hardware gates stayed off during
     # a reconnect. Establish and verify OFF through the kernel before claiming.
     write_owner 0
-    write_owner 60
+    if ! write_owner 60; then
+        owner_diagnostics > /run/m39-owner-rejected.txt 2>&1 || :
+        cat /run/m39-owner-rejected.txt >&2
+        exit 1
+    fi
     if ! M39_SUPERVISED=1 /run/m39-pmic-pulse.sh --watchdog-test-3900 200 \
             > /run/m39-arm-watchdog.log 2>&1; then
         write_owner 0
