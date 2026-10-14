@@ -75,7 +75,11 @@ Both nl80211 and wext associate, receive handshake message1 and send message2,
 but authentication has not completed. DHCP has not obtained a lease. A bounded
 EAPOL capture confirms packets in both directions; it does not prove successful
 over-the-air delivery of outgoing frames. The user reported hotspot auto-off;
-with it staying enabled, authentication still fails. Test WPA2-only next.
+with it staying enabled, authentication still fails. WPA2-only also failed at
+the same step. Next discriminating test: another device using the same credential,
+then radio TX/firmware investigation if that succeeds. Failed-auth retries are
+disabled while waiting; WMT remains initialized. Evidence is local
+`logs/wifi-wpa2-only-test.txt` and `logs/wifi-eapol-summary.txt`.
 
 The backup nvdata filesystem retained `/APCFG/APRDEB/WIFI` (514 bytes) and
 `WIFI_CUSTOM` (6 bytes). These were restored privately to the driver's
