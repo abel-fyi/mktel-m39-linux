@@ -66,6 +66,16 @@ segment, repeat boot/reconnect and move to actual cutoff/recharge. Full-charge
 termination and depleted recovery remain unverified. [BATTERY.md](BATTERY.md)
 explains ownership; local `CURRENT-STATE.md` holds exact live versions and jobs.
 
+## Networking preparation
+
+Read-only Wi-Fi survey completed while the charging trial continued. Kernel
+Gen2/WMT code is linked, but only the detection node exists and firmware/tools
+are absent from Alpine. Identity query returns0x0335. Six connectivity firmware
+and loader files were recovered locally from the preserved vendor backup;
+loader disassembly establishes the0x6735 initialization-family mapping.
+No radio was powered on and no recovered firmware was installed.
+See [NETWORKING.md](NETWORKING.md) for evidence and the native initialization work.
+
 ## Working agreement
 
 - Choose one concrete deliverable per session, test it appropriately, and save
