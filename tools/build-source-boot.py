@@ -43,6 +43,8 @@ if args.charge_tools:
     charge_files = {
         'usr/local/sbin/m39-charge': (root / 'tools/m39-charge.sh').read_bytes(),
         'usr/local/sbin/m39-battery-status': (root / 'tools/m39-battery-status.sh').read_bytes(),
+        'usr/local/libexec/m39/m39-low-battery-policy.sh': (root / 'tools/m39-low-battery-policy.sh').read_bytes(),
+        'usr/local/libexec/m39/m39-low-battery-monitor.sh': (root / 'tools/m39-low-battery-monitor.sh').read_bytes(),
         'usr/local/sbin/m39-poweroff': (root / 'tools/m39-poweroff.sh').read_bytes(),
         'usr/local/sbin/poweroff': (root / 'tools/m39-poweroff.sh').read_bytes(),
         'usr/local/libexec/m39/m39-charge-policy.sh': (root / 'tools/m39-charge-policy.sh').read_bytes(),

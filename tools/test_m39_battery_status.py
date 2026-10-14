@@ -13,6 +13,7 @@ with tempfile.TemporaryDirectory() as d:
   (p/'m39-charge-status.json').write_text(json.dumps(base|changes))
   value=json.loads(subprocess.check_output(['sh',str(script)],env=env))
   assert value['status']==expected,(changes,value)
+  if expected=='charging': assert value['input_present'] is True
   assert all(value[k] is None for k in ('percentage','full','cell_temperature'))
   if changes.get('uptime_seconds')==90 or changes.get('boot_id')=='other':assert value['voltage_mv'] is None
  (p/'proc/123/stat').write_text('alive')

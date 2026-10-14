@@ -48,7 +48,12 @@ if [ -r "$runtime/m39-charge-status.json" ]; then
      if [ "$phase" = charging ] && [ -r "$proc_root/$pid/stat" ] &&
         tr '\000' ' ' < "$proc_root/$pid/cmdline" | grep -Fq m39-pmic-pulse.sh &&
         [ "$(field charging_off_verified)" = false ] && [ "$current" != null ]; then
-      if [ "$current" -gt 0 ]; then status=charging; else status=unknown; fi
+      if [ "$current" -gt 0 ]; then
+       status=charging
+       # This fresh controller sample passed the USB-voltage guard before
+       # publishing charging. No new hardware read is needed here.
+       input_present=true
+      else status=unknown; fi
      fi
     elif [ "$status" = unknown ]; then reason=stale_record; fi
    else reason=invalid_record; fi ;;
@@ -75,8 +80,10 @@ if [ -r "$runtime/m39-broker.json" ]; then
      canonical_unsigned "$usb" && [ "$stamp" -le "$now" ] &&
      [ "$((now-stamp))" -le 5 ] && [ "$bm" -ge 2700 ] && [ "$bm" -le 4300 ]; then
    if [ "$voltage" = null ]; then voltage=$bm; age=$((now-stamp)); fi
-   if [ "$usb" -lt 1000 ]; then input_present=false
-   elif [ "$usb" -ge 4500 ] && [ "$usb" -le 5500 ]; then input_present=true; fi
+   if [ "$input_present" = null ]; then
+    if [ "$usb" -lt 1000 ]; then input_present=false
+    elif [ "$usb" -ge 4500 ] && [ "$usb" -le 5500 ]; then input_present=true; fi
+   fi
   fi
  fi
 fi

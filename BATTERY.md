@@ -57,10 +57,25 @@ m39-screen off
 cat /run/m39-broker.json /run/m39-charge-status.json
 ```
 
-`m39-poweroff` is the new controlled shutdown path for the custom init: stop
+`m39-poweroff` is the controlled shutdown path for the custom init: stop
 charging, verify OFF, sync/remount persistent storage read-only, then invoke
-kernel poweroff. Software refusal/ordering tests passed; hardware shutdown
-validation is pending. USB attachment may cause charging-mode reboot.
+kernel poweroff. Shutdown on battery and USB-attached shutdown were verified
+on kernel #22. USB attachment causes a fresh charging boot with storage locked.
+
+## Low-battery observer
+
+`/usr/local/libexec/m39/m39-low-battery-monitor.sh --observe` consumes existing
+fresh battery status; it performs no hardware reads, charging changes or poweroff.
+Runtime results are in `/run/m39-low-battery.json`. Missing/stale input data resets
+its debounce; repeated copies of one sample cannot satisfy the low-voltage test.
+Only three distinct low readings separated by at least five seconds, with USB
+absent, produce `shutdown_recommended`.
+
+The candidate cutoff is3.4V: a conservative development value above the prior
+3.3V diagnostic minimum and observed low-voltage boot failures. It is not a
+calibrated M39 cutoff, and **automatic shutdown is disabled** until independent
+voltage validation and a controlled end-to-end test. This observer is not
+low-battery recovery or completed discharge protection. Percentage remains unknown.
 
 `stop` also cancels pending startup and the explicit broker for this boot. `arm`
 explicitly validates and rearms the legacy bounded service. The broker is launched
