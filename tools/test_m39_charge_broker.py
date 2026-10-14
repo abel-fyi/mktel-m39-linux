@@ -11,6 +11,7 @@ from pathlib import Path
 p=Path(os.environ['M39_MOCK_RUNTIME']);pid=int(os.environ['M39_MOCK_PID'])
 with (p/'calls').open('a') as f:f.write(sys.argv[1]+'\n')
 if sys.argv[1]=='stop':
+ if (p/'fail-stop').exists():sys.exit(1)
  (p/'owner').write_text('0\n')
  if os.environ.get('M39_STOP_INTERNAL')!='1':(p/'m39-charge-startup.disabled').touch()
 else:
@@ -23,6 +24,8 @@ else:
  (p/'sampler').write_text(f'#!/bin/sh\necho sample >> "{p}/samples"\ncat "{p}/adc"\n');(p/'sampler').chmod(0o755)
  (p/'pause').write_text('#!/bin/sh\nexec /bin/sleep .02\n');(p/'pause').chmod(0o755)
  env=dict(os.environ,M39_MOCK_RUNTIME=d,M39_MOCK_PID=str(worker.pid),M39_BROKER_RUNTIME=d,M39_BROKER_COMMAND=str(p/'command'),M39_BROKER_ADC=str(p/'sampler'),M39_BROKER_POLICY=str(root/'m39-charge-policy.sh'),M39_BROKER_BOOT=str(p/'boot'),M39_BROKER_UPTIME=str(p/'uptime'),M39_BROKER_OWNER=str(p/'owner'),M39_BROKER_PROC=str(p/'proc'),M39_BROKER_SLEEP=str(p/'pause'))
+ def set_adc(values):
+  (p/'adc-next').write_text(values);(p/'adc-next').replace(p/'adc')
  def await_phase(phase):
   end=time.monotonic()+5
   while time.monotonic()<end:
@@ -37,14 +40,14 @@ else:
  proc=subprocess.Popen(['sh',str(root/'m39-charge-broker.sh'),'--run'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
  try:
   await_phase('target_hold');assert 'arm' not in (p/'calls').read_text()
-  (p/'adc').write_text('3750 3750 5000 695 410\n');await_phase('charging')
+  set_adc('3750 3750 5000 695 410\n');await_phase('charging')
   samples=(p/'samples').read_text();time.sleep(.1);assert (p/'samples').read_text()==samples,'Concurrent ADC reader during charging'
-  (p/'adc').write_text('3850 3850 5000 695 410\n');publish();await_phase('target_hold')
+  set_adc('3850 3850 5000 695 410\n');publish();await_phase('target_hold')
   count=(p/'calls').read_text().count('arm');time.sleep(.1);assert (p/'calls').read_text().count('arm')==count
-  (p/'adc').write_text('3750 3750 5000 695 410\n');await_phase('charging');assert (p/'calls').read_text().count('arm')==count+1
-  (p/'adc').write_text('3700 3700 0 695 410\n');publish(stop_reason='unplugged',battery_mv=3700);await_phase('idle')
+  set_adc('3750 3750 5000 695 410\n');await_phase('charging');assert (p/'calls').read_text().count('arm')==count+1
+  set_adc('3700 3700 0 695 410\n');publish(stop_reason='unplugged',battery_mv=3700);await_phase('idle')
   assert proc.poll() is None,'Unplug must not terminate automatic broker'
-  (p/'adc').write_text('3700 3700 5000 695 410\n');await_phase('charging')
+  set_adc('3700 3700 5000 695 410\n');await_phase('charging')
   count=(p/'calls').read_text().count('arm')
   publish(phase='aborted',stop_reason='fault',battery_mv=3700);out,err=proc.communicate(timeout=5)
   assert proc.returncode!=0,(out,err)
@@ -88,6 +91,14 @@ else:
   assert proc.returncode!=0,(out,err)
   assert (p/'owner').read_text().strip()=='0'
   assert (p/'calls').read_text().count('arm')==count,'Reused controller PID retried'
+  stat.write_text(Path(f'/proc/{worker.pid}/stat').read_text())
+  (p/'m39-broker.json').unlink()
+  proc=subprocess.Popen(['sh',str(root/'m39-charge-broker.sh'),'--run'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+  await_phase('charging')
+  (p/'fail-stop').touch();(p/'m39-charge-startup.disabled').touch()
+  out,err=proc.communicate(timeout=5)
+  assert proc.returncode!=0,(out,err)
+  assert json.loads((p/'m39-broker.json').read_text())['phase']=='fault','Failed cleanup was reported successful'
  finally:
   if proc.poll() is None:proc.terminate();proc.communicate(timeout=5)
   worker.terminate();worker.wait()

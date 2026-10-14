@@ -155,3 +155,16 @@ charging. On the same boot/controller, signed fuel-gauge counts rose from +216
 with the backlight lit to +485 with brightness 0; battery ADC reported 3.624 V.
 This is a comparison of uncalibrated counts, not measured amperage. CPU suspend
 was not enabled, and current/voltage/watchdog limits were unchanged.
+
+## Automatic broker hardware validation underway
+
+The bounded broker is now running as an explicit supervised hardware test, after
+stopping the previous coordinator and verifying charger-off/lease release. It
+started its own watchdog-validated session and reported net charging at 3.631 V.
+It is not integrated into boot. The 190-minute overall test budget, per-session
+leases, voltage/current caps and fault shutdown remain enforced. Actual target
+cutoff, hold, recharge and timed restart are still awaiting hardware evidence.
+Cleanup-command failure is also regression-tested and cannot report success.
+
+Monitor with `cat /run/m39-broker.json; cat /run/m39-charge-status.json` on the phone.
+`m39-charge stop` cancels the broker through the operator-stop flag.

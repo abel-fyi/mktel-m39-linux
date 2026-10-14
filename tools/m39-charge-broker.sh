@@ -32,8 +32,8 @@ status() {
  mv "$runtime/m39-broker.json.tmp" "$runtime/m39-broker.json"
 }
 stop_controller() {
- M39_STOP_INTERNAL=1 "$command" stop
- [ "$(cat "$owner_file")" = 0 ]
+ M39_STOP_INTERNAL=1 "$command" stop || return 1
+ [ "$(cat "$owner_file")" = 0 ] || return 1
  controller=''
  controller_start=''
 }
