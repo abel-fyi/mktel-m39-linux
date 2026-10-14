@@ -43,6 +43,8 @@ if args.charge_tools:
     charge_files = {
         'usr/local/sbin/m39-charge': (root / 'tools/m39-charge.sh').read_bytes(),
         'usr/local/sbin/m39-battery-status': (root / 'tools/m39-battery-status.sh').read_bytes(),
+        'usr/local/libexec/m39/m39-charge-policy.sh': (root / 'tools/m39-charge-policy.sh').read_bytes(),
+        'usr/local/libexec/m39/m39-charge-broker.sh': (root / 'tools/m39-charge-broker.sh').read_bytes(),
         'usr/local/libexec/m39/m39-pmic-pulse.sh': (root / 'tools/m39-pmic-pulse.sh').read_bytes(),
         'usr/local/libexec/m39/m39-plug-charge.sh': (root / 'tools/m39-plug-charge.sh').read_bytes(),
         'usr/local/libexec/m39/m39-fg-sample': (root / 'artifacts/m39-fg-sample').read_bytes(),

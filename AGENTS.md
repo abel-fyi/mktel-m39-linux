@@ -1,0 +1,26 @@
+# Working efficiently
+
+- Preserve the user's full objective, but distinguish software work from hardware
+  verification. Never claim an untested battery behavior is complete.
+- Do useful independent implementation work while bounded phone-side jobs run.
+  Do not create filler edits or redundant tests just to appear busy.
+- Do not repeatedly poll charging, compilation, or backups. The user monitors long
+  runs. Check at an expected milestone, reported completion/fault, or explicit request.
+- A running autonomous job is not a reason for repeated status-only agent turns.
+  If the next step only needs elapsed time, explain that once and give the monitoring
+  command. Do not start a token-consuming sleep/poll loop.
+- For persistent goals, follow the governing goal lifecycle rules. Do not falsely
+  mark completion or blockage, and do not pause without the user's request. Explain
+  when pausing automatic goal continuations would avoid paying for idle turns.
+- Batch independent reads and searches; return only relevant output. Avoid repeatedly
+  printing long history, unchanged status files, or the same documentation.
+- Keep updates concise and milestone-oriented. Ask only necessary physical actions
+  or missing information. Do not repeatedly ask whether the user is present/cool.
+- Before restarting a job, verify its actual process/handle is terminal or missing.
+  A console timeout is not proof it stopped. Never blindly replay hardware mutations.
+- Use one USB client at a time; briefly pause conflicting watchers and restore them.
+- Preserve encrypted root/home, recovery images, backups, and private credentials.
+  Never print, embed in firmware, or commit secrets.
+- Keep watchdog, current/voltage limits, and fault shutdown. Hardware validation
+  gates must not be bypassed to save time. Do not raise charge limits without evidence.
+- Make local commits for substantive completed work. Do not push unless requested.

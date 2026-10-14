@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Verify encrypted bootstrap against its source image and exact public inputs."""
-import gzip, hashlib, json, struct
+import argparse, gzip, hashlib, json, struct
 from pathlib import Path
 from bootramdisk import entries
 root = Path(__file__).resolve().parent.parent
-meta = json.loads((root/'artifacts/alpine-m39-encrypted-source.json').read_text())
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--name', default='alpine-m39-encrypted-source')
+args = parser.parse_args()
+assert Path(args.name).name == args.name
+meta = json.loads((root/'artifacts'/f'{args.name}.json').read_text())
 base = (root/'artifacts'/meta['source_image']).read_bytes()
-image = (root/'artifacts/alpine-m39-encrypted-source.partition.img').read_bytes()
+image = (root/'artifacts'/f'{args.name}.partition.img').read_bytes()
 assert hashlib.sha256(base).hexdigest() == meta['source_partition_sha256']
 assert hashlib.sha256(image).hexdigest() == meta['partition_sha256']
 assert len(image) == len(base) == 16777216

@@ -6,8 +6,10 @@ from bootramdisk import entries, replace_file, append_files
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--source-name', default='alpine-m39-storage-tools')
+parser.add_argument('--name', default='alpine-m39-encrypted-source')
 args = parser.parse_args()
 assert Path(args.source_name).name == args.source_name
+assert Path(args.name).name == args.name
 root = Path(__file__).resolve().parent.parent
 metadata = json.loads((root/'artifacts/encrypted-internal-root.json').read_text())
 base_meta = json.loads((root/'artifacts'/f'{args.source_name}.json').read_text())
@@ -50,7 +52,7 @@ header[576:608] = digest.digest()+bytes(12)
 boot = bytes(header)+kernel.ljust(align(len(kernel)),b'\0')+ramdisk.ljust(align(len(ramdisk)),b'\0')
 assert len(boot)<=len(base)
 partition = boot.ljust(len(base),b'\0')
-name = 'alpine-m39-encrypted-source'
+name = args.name
 (root/'artifacts'/f'{name}.img').write_bytes(boot)
 (root/'artifacts'/f'{name}.partition.img').write_bytes(partition)
 result = dict(source_image=f'{args.source_name}.partition.img',
