@@ -9,6 +9,16 @@ A usable Alpine Linux phone: encrypted storage, reliable boot, dependable
 charging and unplugged operation, networking, and a lightweight interface.
 Preserve recovery paths and document experimental limitations.
 
+## Current priority: maintainable Alpine upgrades
+
+The user's next milestone is a conventional Alpine system that can track stable
+releases through normal package upgrades. Follow [ALPINE-MILESTONE.md](ALPINE-MILESTONE.md):
+SSH/inventory, OpenRC integration, reproducible device packages, then a tested
+stable-release upgrade with recovery. Assess modern-kernel feasibility explicitly;
+Linux 3.18 cannot be assumed compatible with all future Alpine releases.
+This priority supersedes the immediate work ordering below, while preserving all
+remaining battery/hardware goals and safety gates. No live upgrade has begun.
+
 ## Established baseline
 
 - Alpine boots with a physical terminal, fastfetch and USB shell.
@@ -38,7 +48,8 @@ from that completion scope and remains a separate limitation.
    Report percentage only after defensible calibration. Until then, this is
    supervised experimental charging, not normal unattended phone charging.
 
-Modern-kernel work and a firmware/security audit remain later objectives.
+Modern-kernel feasibility is now part of the maintainability milestone; the
+firmware/security audit remains a later objective.
 Do not block all useful Linux work on finishing every battery feature once the
 limited development baseline is dependable. Do not bypass hardware protections.
 
