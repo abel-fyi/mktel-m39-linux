@@ -25,6 +25,10 @@
 - Use one USB client at a time; briefly pause conflicting watchers and restore them.
 - Preserve encrypted root/home, recovery images, backups, and private credentials.
   Never print, embed in firmware, or commit secrets.
+- The user authorizes automatic development unlock using the existing private
+  local key whenever needed. Do not ask them to type the passphrase. Transfer
+  credentials privately and remove the temporary phone-side key after unlock;
+  never embed it in boot images or bypass encryption.
 - Keep watchdog, current/voltage limits, and fault shutdown. Hardware validation
   gates must not be bypassed to save time. Do not raise charge limits without evidence.
 - Make local commits for substantive completed work. Do not push unless requested.
