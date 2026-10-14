@@ -44,6 +44,18 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
+Observation-only low-battery monitor is implemented, tested and installed in
+root; PID5024 reports externally powered. It uses existing fresh status, counts
+three distinct low readings, resets on stale data/USB input, and cannot call
+poweroff. Candidate3.4V cutoff remains unvalidated; automatic shutdown is OFF.
+Public status now exposes external input from a fresh, positive charging sample.
+At uptime608 the current charging controller7736 remained healthy at3539mV,
+raw current+462, backlight0. Evidence: local `logs/low-battery-observer-installed.txt`.
+User has a possible DMM8900; exact variant not confirmed. Manufacturer series
+manual: https://www.all-sun.com/manual/DMM8900_en.pdf . mA input below200mA,
+10A input unfused/time-limited; do not improvise current probing across a cell.
+Independent current/taper calibration remains a blocker for full-charge validation.
+
 Kernel #22 is installed and boot-tested. Charging-off gauge probing passed1599
 snapshots over180 seconds. The prior ADC-lock conflict is corrected; longer
 charging reliability remains unverified.
