@@ -187,3 +187,10 @@ register writes are unchanged. Fault-injection tests verify stage codes and clea
 1,000 consecutive charging-off hardware snapshots passed. This does not prove the
 earlier fault resolved. A fresh explicitly launched watchdog-validated broker run
 uses the instrumented helper and transition history, with unchanged charge limits.
+
+The instrumented hardware run completed two timed segments and automatically
+started a third. Transition history records both rest/stop intervals and distinct
+controller PIDs; fresh watchdog validation before the third segment demonstrated
+charger cutoff again. After about 75 minutes, net charging continued at 3.735 V.
+No ADC fault recurred during this interval; the original cause remains unknown.
+Actual voltage cutoff, recharge and full termination are still unverified.
