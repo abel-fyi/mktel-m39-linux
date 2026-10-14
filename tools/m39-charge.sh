@@ -14,6 +14,8 @@ write_owner() (
 )
 owner_diagnostics() (
     # Read-only evidence for a rejected lease; never relax kernel guards.
+    rejection=/sys/module/charging_hw_pmic/parameters/m39_owner_rejected
+    if [ -r "$rejection" ]; then cat "$rejection"; return; fi
     request=/run/m39-owner-read.$$
     trap 'rm -f "$request"' EXIT
     for reg in 0200 0f48 0f4e 0f50 0f54; do

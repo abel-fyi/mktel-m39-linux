@@ -126,3 +126,9 @@ acquisition/release failure; charger-off was verified and no automatic retry occ
 Physical reconnect is therefore not yet validated for this broker. Instrumented
 fuel-gauge diagnostics distinguish acquisition contention from release failure,
 without changing retry/time bounds or charger controls. The cause remains unresolved.
+
+A kernel-side read-only lease record is being tested to identify reconnect rejection
+at the actual guard evaluation, rather than from later register reads. Its mask is
+identity=1, gates=2, CV=4, current=8, overvoltage=16. The original acceptance conditions,
+lease duration and watchdog are unchanged; exhaustive host guard tests pass.
+The hardware-off normalization did not resolve the observed reconnect failure.
