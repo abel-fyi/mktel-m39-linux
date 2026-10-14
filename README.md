@@ -24,6 +24,10 @@ remain applicable; linked external firmware and sources are not relicensed.
 
 ## Battery: work in progress
 
+Charging reliability is unresolved: the latest completed charging trial on
+kernel #22 stopped on a fuel-gauge release timeout and verified charging OFF.
+Passing a charging-off probe did not establish sustained charging reliability.
+
 Verified bounded charging: nominal 300 mA, 3.9 V ceiling, hardware watchdog,
 30-minute maximum session and charger shutdown. After explicit arming,
 unplug/reconnect starts another bounded session.
