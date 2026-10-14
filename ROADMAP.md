@@ -44,6 +44,14 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
+Kernel #21 is installed and verified, with a diagnostic record identifying the
+vendor command and hold duration at lock timeout. Encrypted root/home survived
+and unlocked automatically. Charging is OFF. A maximum180-second raw gauge
+probe is running; it stops on its first read failure. Inspect its outcome after
+completion (`/run/m39-fg-lock-probe.json` and `.log`), not through idle polling.
+The timeout's suspected cause is the shared lock also covering slow ADC commands;
+confirm the holder before changing lock scope.
+
 Latest check: kernel #20's run **failed** at uptime215 with `Resource busy`
 from the gauge endpoint, despite the bounded lock wait. Charging OFF was
 verified; no restart performed. The next investigation is which vendor gauge
