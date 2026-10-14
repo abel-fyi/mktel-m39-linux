@@ -110,3 +110,8 @@ Kernel #17 with debug-only PMIC access logging completed three consecutive
 30-minute sessions without a watchdog/charger fault. Final voltage was 3.606 V;
 charging stopped at the test time budget and shutdown was verified. The 3.9 V
 ceiling was not reached, so cutoff/recharge behavior remains unverified.
+
+`m39-battery-status` reports charging only from a fresh matching-boot record,
+a live controller and positive raw fuel current. It rejects stale/malformed
+records and never translates voltage into percentage or claims a full battery.
+Percentage/full/cell temperature remain null pending verification/calibration.
