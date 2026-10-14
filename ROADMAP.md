@@ -51,14 +51,14 @@ was separately fixed. Evidence: local `logs/voltage-check-and-fault.txt`.
 
 The release-budget candidate compiled and passed nine core/seven adapter fault
 cases. It uses the remaining original30ms budget for actual release confirmation;
-no timing-invalid sample is accepted and cleanup failures stay fatal. Installation
-and hardware validation are in progress; boot success is not reliability proof.
+no timing-invalid sample is accepted and cleanup failures stay fatal. Kernel #23 is installed with full readback verification; root/home handoff and
+automatic backlight idle passed. A three-minute charging gauge probe is active; boot success is not reliability proof.
 
 Independent removed-pack reading3.45V versus prior charging-off ADC3.480V is a
 sanity comparison under different conditions, not current/threshold calibration.
 The low-battery monitor is observation-only; no automatic cutoff is enabled.
 
-Next: one reproducible failure, this justified candidate, then sustained charging
+Next: inspect the charging probe at completion/fault, then sustained charging
 validation. No new battery features until it holds. After a clean1770-second
 segment, repeat boot/reconnect and move to actual cutoff/recharge. Full-charge
 termination and depleted recovery remain unverified. [BATTERY.md](BATTERY.md)
