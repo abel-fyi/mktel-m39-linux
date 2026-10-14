@@ -177,6 +177,16 @@ fuel_current() (
     # reader or treats a failed/stale acquisition as a valid current sample.
     exec /run/m39-fg-sample
 )
+verify_charge_profile() {
+    regulation_now=$(readreg 0f4c) || fail 'Regulation register unreadable'
+    cv_now=$(readreg 0f4e) || fail 'CV register unreadable'
+    current_now=$(readreg 0f50) || fail 'Current register unreadable'
+    voltage_mode_now=$(readreg 0f7a) || fail 'Voltage mode register unreadable'
+    [ "$((regulation_now & 10))" -eq 10 ] || { stop_reason=regulation_disabled; fail 'Voltage/current regulation disabled'; }
+    [ "$((cv_now & 31))" -eq "$cv_code" ] || { stop_reason=power_profile_changed; fail 'CV limit changed'; }
+    [ "$((current_now & 15))" -eq "$current_code" ] || { stop_reason=power_profile_changed; fail 'Current limit changed'; }
+    [ "$((voltage_mode_now & 70))" -eq 68 ] || { stop_reason=power_profile_changed; fail 'Voltage-control mode changed'; }
+}
 guard() {
     if [ -n "$stop_file" ] && [ -e "$stop_file" ]; then
         stop_reason=stop_requested
@@ -379,14 +389,7 @@ while [ "$count" -lt "$intervals" ]; do
         [ "$(( $(readreg 0f48) & 24 ))" -eq 24 ] || { stop_reason=charger_stopped; fail 'Charger stopped before sampling'; }
         [ "$(( $(readreg 0f66) & 4 ))" -eq 0 ] || fail 'Watchdog expired before sampling'
         [ "$(( $(readreg 0f62) & 31 ))" -eq 16 ] || fail 'Four-second watchdog profile changed'
-        regulation_now=$(readreg 0f4c) || fail 'Regulation register unreadable before sampling'
-        cv_now=$(readreg 0f4e) || fail 'CV register unreadable before sampling'
-        current_now=$(readreg 0f50) || fail 'Current register unreadable before sampling'
-        voltage_mode_now=$(readreg 0f7a) || fail 'Voltage mode register unreadable before sampling'
-        [ "$((regulation_now & 10))" -eq 10 ] || { stop_reason=regulation_disabled; fail 'Voltage/current regulation disabled before sampling'; }
-        [ "$((cv_now & 31))" -eq "$cv_code" ] || { stop_reason=power_profile_changed; fail 'CV limit changed before sampling'; }
-        [ "$((current_now & 15))" -eq "$current_code" ] || { stop_reason=power_profile_changed; fail 'Current limit changed before sampling'; }
-        [ "$((voltage_mode_now & 70))" -eq 68 ] || { stop_reason=power_profile_changed; fail 'Voltage-control mode changed before sampling'; }
+        verify_charge_profile
         old=$(readreg 0f62); writereg 0f62 "$((old | 256))"
     fi
     guard
@@ -419,10 +422,7 @@ while [ "$count" -lt "$intervals" ]; do
         fi
     fi
     if [ "$supervised_run" -eq 1 ]; then
-        [ "$(( $(readreg 0f4c) & 10 ))" -eq 10 ] || fail 'Voltage/current regulation disabled'
-        [ "$(( $(readreg 0f4e) & 31 ))" -eq "$cv_code" ] || fail 'CV limit changed'
-        [ "$(( $(readreg 0f50) & 15 ))" -eq "$current_code" ] || fail 'Current limit changed'
-        [ "$(( $(readreg 0f7a) & 70 ))" -eq 68 ] || fail 'Voltage-control configuration changed'
+        verify_charge_profile
         old=$(readreg 0f62); writereg 0f62 "$((old | 256))"
     fi
     count=$((count + 1))
