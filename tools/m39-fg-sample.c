@@ -9,18 +9,28 @@ struct io {
     u64 (*now)(void);
     void (*pause)(void);
 };
-struct result { unsigned raw, attempts, stage; };
+struct result { unsigned raw, attempts, stage, release_stage, release_control; };
 
-static int release(const struct io *p, u64 deadline) {
+static int release(const struct io *p, u64 deadline, struct result *out) {
     unsigned control;
+    out->release_stage=1;
     if (p->read(0xca4, &control)) return -1;
+    out->release_control=control;
+    out->release_stage=2;
     if (p->write_control((control & 255) | 0x800)) return -1;
     do {
+        out->release_stage=3;
         if (p->read(0xca4, &control)) return -1;
-        if (!(control & 0x400))
-            return p->write_control(control & 255);
+        out->release_control=control;
+        if (!(control & 0x400)) {
+            out->release_stage=4;
+            if (p->write_control(control & 255)) return -1;
+            out->release_stage=0;
+            return 0;
+        }
         p->pause();
     } while (p->now() < deadline);
+    out->release_stage=5;
     return -1;
 }
 
@@ -46,7 +56,7 @@ static int snapshot(const struct io *p, struct result *out) {
         out->stage=9;
         if (p->now() >= finish) return -1;
         if (p->write_control((control & 255) | 0x200)) {
-            out->stage=release(p, p->now() + 5000000ULL)?10:5;
+            out->stage=release(p, p->now() + 5000000ULL, out)?10:5;
             return -1;
         }
         int complete = 0, io_failed = 0;
@@ -65,7 +75,7 @@ static int snapshot(const struct io *p, struct result *out) {
             }
             p->pause();
         } while (p->now() < ready_deadline && p->now() < finish);
-        if (release(p, p->now() + 5000000ULL)) { out->stage=10; return -1; }
+        if (release(p, p->now() + 5000000ULL, out)) { out->stage=10; return -1; }
         if (io_failed) return -1;
         if (complete && p->now() < finish) {
             out->raw = raw;
@@ -107,6 +117,7 @@ static int write_control(unsigned value) {
     } else if (value & 0x800) {
         clears++;
         if (!strcmp(scenario, "release-error")) return -1;
+        if (!strcmp(scenario, "release-timeout")) return 0;
         ctrl = value & 255;
     } else ctrl = value;
     return 0;
@@ -118,8 +129,8 @@ int main(int argc, char **argv) {
     struct io p = {read_reg, write_control, now, pause_io};
     struct result r = {0};
     int rc = snapshot(&p, &r);
-    printf("rc=%d raw=%u requests=%u clears=%u low_changes=%u ctrl=%u ticks=%llu failed_reads=%u stage=%u\n",
-           rc, r.raw, requests, clears, changes, ctrl, ticks, failed_reads,r.stage);
+    printf("rc=%d raw=%u requests=%u clears=%u low_changes=%u ctrl=%u ticks=%llu failed_reads=%u stage=%u release_stage=%u release_control=%u\n",
+           rc, r.raw, requests, clears, changes, ctrl, ticks, failed_reads,r.stage,r.release_stage,r.release_control);
     return 0;
 }
 #else
@@ -195,7 +206,16 @@ void _start(void) {
     }
     if (rc) {
         char error[64]="FG_ERROR stage=";unsigned n=15;
-        n+=decimal(error+n,r.stage);error[n++]='\n';
+        n+=decimal(error+n,r.stage);
+        if (r.stage==10) {
+            const char detail[]=" release_stage=";
+            for (unsigned i=0;i<sizeof(detail)-1;i++) error[n++]=detail[i];
+            n+=decimal(error+n,r.release_stage);
+            const char control[]=" control=";
+            for (unsigned i=0;i<sizeof(control)-1;i++) error[n++]=control[i];
+            n+=decimal(error+n,r.release_control);
+        }
+        error[n++]='\n';
         sc(64,2,(long)error,n,0);
     }
     sc(93,rc ? 1 : 0,0,0,0);

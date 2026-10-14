@@ -57,6 +57,17 @@ class GaugeChecks(unittest.TestCase):
                 self.assertEqual(result['clears'], 1)
                 self.assertEqual(result['stage'], 7 if scenario=='read-error' else 10)
 
+    def test_release_write_failure_and_latch_timeout_are_distinguished(self):
+        for scenario, detail in [('release-error', 2), ('release-timeout', 5)]:
+            with self.subTest(scenario=scenario):
+                result = self.sample(scenario)
+                self.assertEqual(result['rc'], -1)
+                self.assertEqual(result['stage'], 10)
+                self.assertEqual(result['release_stage'], detail)
+                self.assertEqual(result['release_control'], 0x629)
+                self.assertLess(result['ticks'], 30000000)
+                self.assertEqual(result['requests'], 1)
+
     def test_wrong_chip_causes_no_measurement_writes(self):
         result = self.sample('wrong-chip')
         self.assertEqual(result['stage'], 2)
