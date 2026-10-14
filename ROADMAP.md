@@ -44,6 +44,16 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
+USB-attached controlled shutdown passed on kernel #22: fresh boot
+`877bb750-8e3f-4d8e-be6c-255d211d353a` with USB boot reason, then positive charging
+while root/home remained locked. Remote unlock/handoff, persistence and a synced
+1 MiB storage write/read passed while charging continued. One broker/controller
+was active. Evidence: local `logs/usb-attached-locked-charging.txt` and
+`logs/usb-shutdown-root-and-io-verified.txt`. The long run was deliberately
+interrupted for these tests. A45-second delayed battery shutdown is now scheduled
+(PID9694); user instructed to unplug, wait1 minute, reconnect without keys.
+Inspect this cold-off startup next; do not replay the pending shutdown job.
+
 Kernel #22 is installed with full boot readback verification. Its charging-off
 probe completed1599 snapshots over180 seconds without logged gauge errors.
 Kernel #21 failed after one snapshot; its trace identified command5 (battery

@@ -26,8 +26,12 @@ this milestone does not establish suitability for unattended charging.
 - [x] Software shutdown works on battery without removing it.
       User observed scheduled `m39-poweroff` shut down on battery; next USB
       insertion produced a fresh boot (`24814e69-6983-4b75-88d4-88b278521ee4`).
-- [ ] With USB attached, document and verify whether controlled shutdown enters
+- [x] With USB attached, document and verify whether controlled shutdown enters
       charging mode or stays off on the current installed version.
+      Kernel #22 `m39-poweroff` produced a fresh boot with `bootreason=usb`.
+      Locked broker186/controller741 charged at3501mV, FG+160 at uptime39,
+      root/home mappings absent. Evidence: local `logs/usb-attached-poweroff-result.txt`
+      and `logs/usb-attached-locked-charging.txt`.
 - [ ] Installed boot and encrypted-root helpers contain the validated fixes.
 
 ### 2. Automatic charging and battery operation
