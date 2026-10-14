@@ -13,11 +13,12 @@ Battery temperature sensing is deferred; PMIC-die temperature is not cell temper
 - Fresh ADC, input-voltage, regulation, PMIC-die and current-direction checks.
 - Faults stop charging and do not automatically retry.
 
-The default boot startup launches bounded experimental charging before encrypted
-root unlock and again after transition to root. Its legacy service does not restart
-a completed session while USB stays connected. The explicit validation broker
-adds verified timed restarts and target/recharge policy, with an overall 190-minute
-test budget. It is not integrated into boot and is not an unattended charging setup.
+The installed boot startup now launches the automatic bounded broker before
+encrypted unlock and restarts it after switching to encrypted root. Root transition
+waits for the old broker and startup to exit. Manual cancellation and fault latches
+survive the transition. The broker supports timed restarts and target/recharge
+policy with a 190-minute overall budget. It remains experimental and supervised.
+Older images without the broker retain the legacy single-session startup.
 
 ## Verified on hardware
 
@@ -92,7 +93,8 @@ Simulation does not prove physical cutoff/recharge or calibration.
    unsupported; CV detection alone is insufficient. Vendor current conversion needs
    board-specific sense resistance and offset, which are not verified here.
 3. Verify low-battery recovery and cold-off plug-in charging end to end.
-4. Integrate the verified automatic policy into encrypted startup and normal operation.
+4. Verify physical USB reconnect and target/recharge behavior with the boot-integrated
+   broker, then graduate the experimental overall time budget to normal operation.
 5. Calibrate charge percentage/capacity if reliable board/cell data can be established.
 6. Identify/calibrate battery temperature sensing and implement cell thermal protection.
 
@@ -108,3 +110,13 @@ The verified manual-only recovery image is
 Artifacts/backups/credentials are excluded from Git. Flash only the checked boot
 partition with complete readback verification; do not blindly reuse old flash scripts.
 Local `CURRENT-STATE.md` and logs hold the latest device state and detailed evidence.
+
+## Installed automatic startup
+
+Boot-partition SHA-256: `8e1d027d742a844553b642f99c5167e6805b43f4d300d2f59a13dfa2b5c3fab1`.
+Full readback matched. A software reboot started charging while root/home were
+locked; USB development unlock then restarted the broker on encrypted root. Both
+filesystem persistence markers survived and the temporary runtime key was removed.
+Two implementation faults were fixed and tested: overlapping stop signals during
+cleanup, and stale service status being mistaken for a newly started controller.
+Actual 3.9 V cutoff/recharge and full-charge termination are still unverified.

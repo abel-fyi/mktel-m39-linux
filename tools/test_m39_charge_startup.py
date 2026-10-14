@@ -25,3 +25,18 @@ with tempfile.TemporaryDirectory() as directory:
         assert calls==('arm\n' if 3200000<=voltage<3900000 and expected != 'disabled' else '')
         assert result.returncode==(0 if expected in ('armed','voltage_limit','disabled') else 1)
 print('PASS: startup arms once, rejects low voltage, skips ceiling and reports failure without retry.')
+# Bundled policy is exec'd only after startup releases its lock; cancellation wins.
+with tempfile.TemporaryDirectory() as directory:
+    root=Path(directory)
+    for name,value in [('usb','1'),('ac','0'),('voltage','3950000'),('boot','test-boot')]:
+        (root/name).write_text(value+'\n')
+    broker=root/'broker'
+    broker.write_text('#!/bin/sh\ntest "$1" = --startup\ntest ! -d "$M39_START_RUNTIME/m39-charge-startup.lock"\nprintf started > "$M39_START_RUNTIME/broker-called"\n')
+    broker.chmod(0o755)
+    env=dict(os.environ,M39_START_RUNTIME=directory,M39_START_USB=str(root/'usb'),M39_START_AC=str(root/'ac'),M39_START_VOLTAGE=str(root/'voltage'),M39_START_BOOT=str(root/'boot'),M39_START_BROKER=str(broker))
+    subprocess.run(['sh',str(script)],env=env,check=True,timeout=5)
+    assert (root/'broker-called').read_text()=='started'
+    (root/'broker-called').unlink();(root/'m39-charge-startup.disabled').touch()
+    subprocess.run(['sh',str(script)],env=env,check=True,timeout=5)
+    assert not (root/'broker-called').exists()
+print('PASS: startup selects bundled policy above target, releases its lock, and preserves manual cancellation.')

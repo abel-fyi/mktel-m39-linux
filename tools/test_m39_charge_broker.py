@@ -6,7 +6,7 @@ with tempfile.TemporaryDirectory() as d:
  p=Path(d);(p/'boot').write_text('test-boot\n');(p/'uptime').write_text('100.00 0.00\n');(p/'owner').write_text('0\n');(p/'adc').write_text('4000 4000 5000 695 410\n');(p/'proc').mkdir()
  worker=subprocess.Popen(['/bin/sleep','120']);(p/f'proc/{worker.pid}').mkdir();(p/f'proc/{worker.pid}/stat').write_text(Path(f'/proc/{worker.pid}/stat').read_text())
  mock=r'''#!/usr/bin/python3
-import json,os,sys
+import json,os,sys,time,subprocess
 from pathlib import Path
 p=Path(os.environ['M39_MOCK_RUNTIME']);pid=int(os.environ['M39_MOCK_PID'])
 with (p/'calls').open('a') as f:f.write(sys.argv[1]+'\n')
@@ -17,7 +17,10 @@ if sys.argv[1]=='stop':
 else:
  assert not (p/'m39-charge-startup.disabled').exists()
  (p/'owner').write_text('1800\n')
- (p/'m39-plug-status.json').write_text(json.dumps(dict(phase='charging',boot_id='test-boot',controller_pid=str(pid))))
+ if (p/'delay-service').exists():
+  assert not (p/'m39-plug-status.json').exists(), 'Old charging record survived rearm'
+  subprocess.Popen([sys.executable,'-c',"import json,time;from pathlib import Path;time.sleep(.1);Path("+repr(str(p/'m39-plug-status.json'))+").write_text("+repr(json.dumps(dict(phase='charging',boot_id='test-boot',controller_pid=str(pid))))+")"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ else:(p/'m39-plug-status.json').write_text(json.dumps(dict(phase='charging',boot_id='test-boot',controller_pid=str(pid))))
  (p/'m39-charge-status.json').write_text(json.dumps(dict(phase='charging',pid=pid,boot_id='test-boot',uptime_seconds=100,battery_mv=3700,charging_off_verified=False,voltage_limit_mv=3900,stop_reason='running')))
 '''
  (p/'command').write_text(mock);(p/'command').chmod(0o755)
@@ -60,6 +63,8 @@ else:
   assert all(e['uptime_seconds']==100 for e in events)
   assert all(a!=b for a,b in zip(events,events[1:])),'Repeated unchanged status flooded event log'
   # A clean timed segment gets fresh validation, rather than extending a lease.
+  (p/'delay-service').touch()
+  (p/'m39-plug-status.json').write_text(json.dumps(dict(phase='charging',boot_id='test-boot',controller_pid='999999')))
   (p/'m39-broker.json').unlink()
   proc=subprocess.Popen(['sh',str(root/'m39-charge-broker.sh'),'--run'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
   await_phase('charging');count=(p/'calls').read_text().count('arm')
@@ -106,6 +111,17 @@ else:
   out,err=proc.communicate(timeout=5)
   assert proc.returncode!=0,(out,err)
   assert json.loads((p/'m39-broker.json').read_text())['phase']=='fault','Failed cleanup was reported successful'
+  (p/'fail-stop').unlink();(p/'owner').write_text('0\n')
+  assert (p/'m39-broker.fault').exists()
+  count=(p/'calls').read_text().count('arm')
+  (p/'m39-charge-startup.disabled').unlink()
+  result=subprocess.run(['sh',str(root/'m39-charge-broker.sh'),'--startup'],env=env,capture_output=True,text=True,timeout=5)
+  assert result.returncode!=0,'Boot startup cleared the fault latch'
+  assert (p/'calls').read_text().count('arm')==count
+  (p/'m39-charge-startup.disabled').touch()
+  result=subprocess.run(['sh',str(root/'m39-charge-broker.sh'),'--startup'],env=env,capture_output=True,text=True,timeout=5)
+  assert result.returncode==0 and (p/'m39-charge-startup.disabled').exists()
+  assert (p/'calls').read_text().count('arm')==count,'Startup ignored operator cancellation'
  finally:
   if proc.poll() is None:proc.terminate();proc.communicate(timeout=5)
   worker.terminate();worker.wait()

@@ -63,7 +63,8 @@ user_stopped=0
 # stop cancels startup immediately; give that bounded test time to release its lease.
 stopped=0
 for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-    if /usr/local/sbin/m39-charge stop >> /run/m39-unlock-charge-stop.log 2>&1; then
+    if /usr/local/sbin/m39-charge stop >> /run/m39-unlock-charge-stop.log 2>&1 &&
+       [ ! -d /run/m39-broker.lock ] && [ ! -d /run/m39-charge-startup.lock ]; then
         stopped=1
         break
     fi

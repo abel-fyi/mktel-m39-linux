@@ -22,6 +22,7 @@ status)
     ;;
 arm)
     [ "$(id -u)" = 0 ]
+    [ ! -d /run/m39-stop.lock ]
     if [ "${M39_STARTUP:-0}" = 1 ]; then
         [ ! -e /run/m39-charge-startup.disabled ] || exit 1
     else
@@ -57,6 +58,16 @@ stop)
     if [ "${M39_STOP_INTERNAL:-0}" != 1 ]; then
         : > /run/m39-charge-startup.disabled
     fi
+    # Manual stop and broker cleanup may arrive together. Serialize signaling
+    # so a second TERM cannot interrupt the service's existing cleanup.
+    attempts=0
+    until mkdir /run/m39-stop.lock 2>/dev/null; do
+        attempts=$((attempts + 1))
+        [ "$attempts" -lt 150 ] || exit 1
+        sleep .1
+    done
+    trap 'rmdir /run/m39-stop.lock' EXIT
+    trap 'exit 1' HUP INT TERM
     rm -f /run/m39-plug-charge-armed
     if [ -d /run/m39-plug-service.lock ]; then
         grep -Fq "\"boot_id\":\"$boot\"" /run/m39-plug-status.json

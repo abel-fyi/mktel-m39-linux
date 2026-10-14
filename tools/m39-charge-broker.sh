@@ -1,8 +1,9 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-2.0-only
-# Explicit experimental automatic target/recharge broker. Not installed at boot.
+# Bounded experimental automatic target/recharge broker, usable by boot startup.
 set -eu
-[ "${1:-}" = --run ] || { echo 'Use --run for supervised 3.9V policy validation.'; exit 2; }
+case "${1:-}" in --run|--startup) ;; *) echo 'Use --run or --startup for bounded 3.9V policy.'; exit 2;; esac
+invocation=$1
 runtime=${M39_BROKER_RUNTIME:-/run}
 command=${M39_BROKER_COMMAND:-/usr/local/sbin/m39-charge}
 adc=${M39_BROKER_ADC:-/usr/local/libexec/m39/m39-adc-sample}
@@ -47,7 +48,7 @@ cleanup() {
  rc=$?
  trap - EXIT
  if [ "$(cat "$boot_file")" = "$boot" ]; then stop_controller || rc=1; fi
- [ "$rc" = 0 ] || { reason=guard_or_controller_failure; status fault; }
+ [ "$rc" = 0 ] || { : > "$runtime/m39-broker.fault"; reason=guard_or_controller_failure; status fault; }
  rm -f "$snapshot"
  rmdir "$runtime/m39-broker.lock"
  exit "$rc"
@@ -55,7 +56,13 @@ cleanup() {
 trap cleanup EXIT
 trap 'reason=signal; status cancelled; exit 0' HUP INT TERM
 # This explicit invocation may clear an earlier manual stop once, never later.
-rm -f "$runtime/m39-charge-startup.disabled"
+if [ "$invocation" = --run ]; then
+ rm -f "$runtime/m39-charge-startup.disabled"
+ rm -f "$runtime/m39-broker.fault"
+else
+ [ ! -e "$runtime/m39-charge-startup.disabled" ] || { reason=operator_stop; status cancelled; exit 0; }
+ [ ! -e "$runtime/m39-broker.fault" ] || exit 1
+fi
 stop_controller
 status idle
 while :; do
@@ -113,10 +120,14 @@ while :; do
   idle|low_voltage|target_hold) state=$action; status "$action"; "$pause" 5 ;;
   start_bounded)
    [ ! -e "$runtime/m39-charge-startup.disabled" ]
+   # The old service is stopped and ownership released. Its last JSON may
+   # still say charging: do not mistake that controller for the new child.
+   rm -f "$runtime/m39-plug-status.json"
    M39_STARTUP=1 "$command" arm
    until_time=$(( $(clock) + 25 ))
    while :; do
     [ "$(clock)" -le "$until_time" ]
+    if [ ! -r "$runtime/m39-plug-status.json" ]; then "$pause" 1; continue; fi
     cp "$runtime/m39-plug-status.json" "$snapshot"
     [ "$(field boot_id)" = "$boot" ]
     if [ "$(field phase)" = charging ]; then controller=$(field controller_pid); break; fi

@@ -77,7 +77,8 @@ stop_child() {
     fi
 }
 cleanup() {
-    trap - EXIT HUP INT TERM
+    trap - EXIT
+    trap '' HUP INT TERM
     stop_child
     status service_stopped
     rmdir "$runtime/m39-plug-service.lock"

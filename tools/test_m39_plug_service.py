@@ -28,6 +28,10 @@ with tempfile.TemporaryDirectory() as name:
   (p/'usb').write_text('0');await_state('waiting_for_power',2)
   assert (p/'owner').read_text().strip()=='0'
   assert (p/'result').read_text().strip()=='cooperative'
+  # A second stop signal must not kill the service midway through cleanup.
+  controller.write_text('#!/bin/sh\nwhile [ ! -e "$M39_STOP_FILE" ]; do sleep .1; done\nsleep .5\n')
+  (p/'usb').write_text('1');await_state('charging',3)
+  proc.terminate();time.sleep(.2);proc.terminate()
  finally:
   proc.terminate();proc.communicate(timeout=5)
  assert proc.returncode==143 and not (p/'m39-plug-service.lock').exists()

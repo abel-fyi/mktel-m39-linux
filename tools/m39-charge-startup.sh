@@ -1,5 +1,5 @@
 #!/bin/sh
-# One bounded experimental session per boot, never an unattended full-charge policy.
+# Start the bounded policy when bundled, otherwise the legacy bounded service.
 set -eu
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 runtime=${M39_START_RUNTIME:-/run}
@@ -7,6 +7,7 @@ usb=${M39_START_USB:-/sys/class/power_supply/usb/online}
 ac=${M39_START_AC:-/sys/class/power_supply/ac/online}
 voltage=${M39_START_VOLTAGE:-/sys/class/power_supply/battery/batt_vol}
 command=${M39_START_COMMAND:-/usr/local/sbin/m39-charge}
+broker=${M39_START_BROKER:-/usr/local/libexec/m39/m39-charge-broker.sh}
 boot_file=${M39_START_BOOT:-/proc/sys/kernel/random/boot_id}
 boot=$(cat "$boot_file")
 status() {
@@ -28,6 +29,13 @@ while :; do
     [ "$stable" -lt 2 ] || break
     sleep 1
 done
+if [ -x "$broker" ]; then
+    [ ! -e "$runtime/m39-charge-startup.disabled" ] || { status disabled; exit 0; }
+    status starting_policy
+    rmdir "$runtime/m39-charge-startup.lock"
+    trap - EXIT
+    exec "$broker" --startup
+fi
 mv=$(cat "$voltage") || { status voltage_unavailable; exit 1; }
 case "$mv" in ''|*[!0-9]*) status voltage_invalid; exit 1;; esac
 # batt_vol is in microvolts. Do not run a watchdog pulse at the voltage ceiling.
