@@ -12,6 +12,31 @@ write_owner() (
     printf '%s\n' "$1" > "$command_file" || exit 1
     cat "$command_file" > "$owner"
 )
+prepare_reconnect_cv() (
+    # Confirmed reconnect standby resets CV to code13 (4.2V). Lower only that
+    # known setting to the validated code3 (3.9V), with both gates verified OFF.
+    access=/sys/devices/platform/mt-pmic/pmic_access
+    request=/run/m39-cv-prepare.$$
+    trap 'rm -f "$request"' EXIT
+    read_reg() {
+        printf '%s\n' "$1" > "$request"
+        cat "$request" > "$access"
+        cat "$access"
+    }
+    [ "$(cat "$owner")" = 0 ] || exit 1
+    chip=$(read_reg 0200); gates=$(read_reg 0f48); cv=$(read_reg 0f4e)
+    [ "$((chip >> 8))" = 40 ] && [ "$((gates & 24))" = 0 ] || exit 1
+    case "$((cv & 31))" in
+        3) exit 0 ;;
+        13)
+            value=$(( (cv & ~31) | 3 ))
+            printf '0f4e %04x\n' "$value" > "$request"
+            cat "$request" > "$access"
+            [ "$(( $(read_reg 0f4e) & 31 ))" = 3 ] || exit 1
+            [ "$(( $(read_reg 0f48) & 24 ))" = 0 ] || exit 1 ;;
+        *) echo 'Unexpected standby CV; refusing to change it.' >&2; exit 1 ;;
+    esac
+)
 owner_diagnostics() (
     # Read-only evidence for a rejected lease; never relax kernel guards.
     rejection=/sys/module/charging_hw_pmic/parameters/m39_owner_rejected
@@ -54,6 +79,7 @@ arm)
     # Ownership being zero does not prove the hardware gates stayed off during
     # a reconnect. Establish and verify OFF through the kernel before claiming.
     write_owner 0
+    prepare_reconnect_cv
     if ! write_owner 60; then
         owner_diagnostics > /run/m39-owner-rejected.txt 2>&1 || :
         cat /run/m39-owner-rejected.txt >&2
