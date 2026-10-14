@@ -44,27 +44,26 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
-Current session: boot `24158b89-ab33-4286-aea7-466cbbd3fa87` unlocked remotely;
-encrypted root/home mounted. Automatic charging passed through root handoff,
-then was explicitly stopped while the user went away; charging OFF verified.
+Kernel #19's serialized gauge endpoint is installed and boot-tested; the full
+boot-partition readback matched. Root/home unlock and automatic charging handoff
+passed. Three physical unplug/reconnect cycles on the same broker passed with
+no logged kernel gauge errors. Longer-run reliability remains unproven.
 
-Vendor gauge transactions lack a lock shared with our userspace helper.
-Contention is a plausible cause of the earlier release failure, not yet proven.
-A candidate kernel serializes vendor transactions and a new bounded raw-current
-endpoint. The same fault-tested acquisition core is reused; supported kernels
-never fall back after endpoint read failure. Kernel compilation, adapter/backend
-tests and encrypted image verification passed. Candidate
-`alpine-m39-encrypted-serialized-gauge.partition.img` is **not flashed or boot-tested**.
-Previous installed image remains intact. Updated root helper is installed.
+Controlled `m39-poweroff` shut down on battery, confirmed by the user. USB
+insertion without power presses produced a fresh boot and the locked prompt.
+Automatic charging preparation began, but the user then left to eat, so charging
+was stopped before sustained positive-current validation. Cold-off charging is
+therefore only partially validated, not complete.
 
-`m39-poweroff` and a `poweroff` alias are installed in root. They stop charging,
-verify OFF, sync and remount storage read-only, then request kernel poweroff
-directly (custom PID 1 has no BusyBox shutdown handler). Ordering/failure tests
-passed; actual poweroff behavior still needs hardware verification.
+Current boot `24814e69-6983-4b75-88d4-88b278521ee4` is unlocked automatically.
+Root/home persistence markers survived; temporary key removed; manual stop
+preserved and owner zero. Keep charging stopped while the user is away.
+Evidence: local `logs/after-poweroff-persistence.txt`,
+`logs/cold-off-charge-and-stop.txt`, `logs/serialized-gauge-three-reconnects.txt`.
 
-Next: when the user returns, verify current state, deploy/readback-test the
-candidate boot, unlock automatically, validate the kernel endpoint and repeat
-charging. Then test controlled shutdown on battery. Do not raise charge limits.
+Next: when the user returns, explicitly revalidate charging, perform a longer
+bounded gauge reliability run while doing independent implementation, then test
+USB-attached shutdown/startup and cutoff/recharge. Do not raise charge limits.
 
 ## Working agreement
 

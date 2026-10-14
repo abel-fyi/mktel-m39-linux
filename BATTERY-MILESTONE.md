@@ -23,8 +23,11 @@ this milestone does not establish suitability for unattended charging.
       accepts an invalid sample or hides failed cleanup.
 - [ ] Measurement contention, I/O errors and stale records produce clear reasons;
       genuine faults stop charging, verify OFF and latch without blind retries.
-- [ ] Software shutdown works on battery without removing it. With USB attached,
-      document and verify whether shutdown enters charging mode or stays off.
+- [x] Software shutdown works on battery without removing it.
+      User observed scheduled `m39-poweroff` shut down on battery; next USB
+      insertion produced a fresh boot (`24814e69-6983-4b75-88d4-88b278521ee4`).
+- [ ] With USB attached, document and verify whether controlled shutdown enters
+      charging mode or stays off on the current installed version.
 - [ ] Installed boot and encrypted-root helpers contain the validated fixes.
 
 ### 2. Automatic charging and battery operation
