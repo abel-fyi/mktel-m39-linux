@@ -27,6 +27,11 @@ if [ ! -e /run/m39-charge-startup.disabled ]; then
     /usr/local/libexec/m39/m39-charge-startup > /run/m39-charge-startup.log 2>&1 &
 fi
 /usr/local/bin/m39-terminal > /run/display-terminal.log 2>&1 &
+# The validated keypad-wake idle helper reduces backlight load. Failure is
+# logged and leaves the terminal usable; it must never prevent root boot.
+if [ -x /usr/local/sbin/m39-screen ]; then
+    /usr/local/sbin/m39-screen on 30 > /run/m39-screen-startup.log 2>&1 || :
+fi
 while :; do
     if [ ! -e /dev/ttyGS0 ]; then mdev -s; sleep 1; continue; fi
     stty -F /dev/ttyGS0 raw -echo

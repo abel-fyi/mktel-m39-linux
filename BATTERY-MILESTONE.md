@@ -36,15 +36,25 @@ this milestone does not establish suitability for unattended charging.
 
 ### 2. Automatic charging and battery operation
 
-- [ ] Charging starts without manual arming while locked and after root unlock.
-      Handoff leaves exactly one controller and preserves fault/manual-stop state.
+- [x] Charging starts without manual arming while locked and after root unlock;
+      handoff leaves exactly one controller.
+      Kernel #22 boots `877bb750...` and `ecf543c7...` passed locked positive
+      charging and automatic root handoff. Evidence: local
+      `logs/usb-shutdown-root-and-io-verified.txt` and `logs/kernel22-cold-off-root-verified.txt`.
+- [ ] Fault/manual-stop preservation remains correct in the final installed
+      handoff implementation. Host tests and prior manual-stop passes exist;
+      retain an explicit final regression rather than assume every version passes.
 - [x] Three consecutive unplug/reconnect cycles on one boot pass: phone stays
       running unplugged, detach is handled cleanly, reconnect starts valid charging.
       Passed on kernel #19, boot `f03dc355-8f66-4aa8-8ed1-f3c074428677`,
       same broker2040; controllers5699/8603/11225 after reconnect. Evidence:
       local `logs/serialized-gauge-three-reconnects.txt`; no kernel gauge errors logged.
-- [ ] Repeat automatic startup after two fresh boots; screen idle/wake and normal
-      storage activity do not break charging or cause unexplained shutdowns.
+- [x] Repeat automatic startup after two fresh boots on kernel #22.
+      Evidence: the two startup/handoff logs above.
+- [ ] Screen idle/wake and normal storage activity do not break charging or cause
+      unexplained shutdowns. A synced1MiB write/read passed while charging;
+      automatic idle startup is installed in root but its next-boot behavior
+      and physical keypad wake still need final regression.
 - [ ] Verify sustained net charging and useful unplugged operation, rather than
       assuming that a configured current equals actual battery current.
 
@@ -63,8 +73,12 @@ this milestone does not establish suitability for unattended charging.
 
 ### 4. Charging while off and low-battery recovery
 
-- [ ] Starting fully powered off, USB insertion enters a minimal charging path
+- [x] Starting fully powered off, USB insertion enters a minimal charging path
       without unlocking root/home or repeatedly booting the full OS.
+      Kernel #22 cold-off USB insertion produced boot `ecf543c7-1edb-4a03-90c1-d10a93c47978`;
+      locked controller743 charged3507mV, FG+238 at61s, both mappings absent.
+      Evidence: local `logs/kernel22-cold-off-charging.txt`. This verifies startup,
+      not sustained charging or recovery from a deeply depleted cell.
 - [ ] Recover a naturally low battery through that path, then boot and unlock
       successfully. Do not deliberately deep-discharge the cell to test this.
 - [ ] Removing USB in charging-only mode produces the documented off behavior.

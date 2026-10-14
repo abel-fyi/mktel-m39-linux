@@ -44,31 +44,27 @@ limited development baseline is dependable. Do not bypass hardware protections.
 
 ## Immediate checkpoint
 
-USB-attached controlled shutdown passed on kernel #22: fresh boot
-`877bb750-8e3f-4d8e-be6c-255d211d353a` with USB boot reason, then positive charging
-while root/home remained locked. Remote unlock/handoff, persistence and a synced
-1 MiB storage write/read passed while charging continued. One broker/controller
-was active. Evidence: local `logs/usb-attached-locked-charging.txt` and
-`logs/usb-shutdown-root-and-io-verified.txt`. The long run was deliberately
-interrupted for these tests. A45-second delayed battery shutdown is now scheduled
-(PID9694); user instructed to unplug, wait1 minute, reconnect without keys.
-Inspect this cold-off startup next; do not replay the pending shutdown job.
+Kernel #22 is installed and boot-tested. Charging-off gauge probing passed1599
+snapshots over180 seconds. The prior ADC-lock conflict is corrected; longer
+charging reliability remains unverified.
 
-Kernel #22 is installed with full boot readback verification. Its charging-off
-probe completed1599 snapshots over180 seconds without logged gauge errors.
-Kernel #21 failed after one snapshot; its trace identified command5 (battery
-voltage AUXADC) contending for an unnecessarily shared lock. The fix preserves
-vendor command serialization and protects all gauge/unknown commands with the
-latch mutex, while four reviewed AUXADC callbacks use only the dispatch mutex.
-Acquisition deadlines, watchdog, voltage/current limits and fault shutdown are
-unchanged. Evidence: local `logs/gauge-lock-scope-probe-result.txt`.
+USB-attached shutdown and cold-off USB insertion both produced fresh boots and
+positive charging while root/home remained locked. Two kernel #22 startups and
+root handoffs passed, each with one broker/controller. Root/home persistence and
+a synced1MiB storage write/read passed. Relevant local evidence:
+`logs/kernel22-cold-off-charging.txt`, `logs/kernel22-cold-off-root-verified.txt`,
+`logs/usb-shutdown-root-and-io-verified.txt`.
 
-Current boot `59baaba0-14b9-400e-9183-ffe829fd3af9` is unlocked; root/home
-persistence markers survived and the temporary key was removed. Charging-off
-sampling passes, but longer charging reliability still needs verification.
-A fresh bounded charging broker has been explicitly launched; the user monitors
-its first segment (~30 minutes). Check on completion/fault, not idle agent polls.
-Next: validate that segment, then USB-attached shutdown/startup and cutoff/recharge.
+Current boot `ecf543c7-1edb-4a03-90c1-d10a93c47978` is unlocked and charging;
+broker7239/controller7736 were observed positive at uptime192. The user watcher
+is restored. Screen idle30s is currently enabled. Root init now starts it
+on future unlocks; installed by atomic rename, with prior init preserved.
+Its next-boot behavior still needs testing. No boot-image change for this addition.
+
+Next: let the current bounded segment run while the user monitors; inspect at
+~30 minutes or reported fault. Then validate actual cutoff/recharge, low-battery
+recovery and remaining reporting/calibration requirements. Do not raise limits
+or spend agent turns polling elapsed charging time.
 
 ## Working agreement
 
